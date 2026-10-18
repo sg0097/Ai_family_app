@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// The child. Owns parent profiles and sees the dashboard.
+model User {
+  id             String          @id @default(cuid())
+  name           String
+  email          String          @unique
+  passwordHash   String
+  phone          String? // child's WhatsApp number, for alerts
+  // Also send "not done yet" alerts to WhatsApp (HELP alerts always go when a phone is set).
+  whatsappAlerts Boolean         @default(true)
+  timezone       String? // the child's own, from their browser; used to label times in alerts
+  createdAt      DateTime        @default(now())
+  parents        ParentProfile[]
+  notifications  Notification[]
+}
+
+enum ConsentStatus {
+  PENDING
+  GRANTED
+  DECLINED
+  REVOKED
+}
+
+model ParentProfile {
+  id              String              @id @default(cuid())
+  userId          String
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String // how the child addresses them, e.g. "Mummy"
+  relationship    String
+  // WhatsApp id format: country code + number, digits only (e.g. 919812345678).
+  // Unique for now: one child per parent. Sharing between siblings needs a join table.
+  phone           String              @unique
+  timezone        String              @default("Asia/Kolkata")
+  emergencyNumber String              @default("112")
+  consentStatus   ConsentStatus       @default(PENDING)
+  consentAt       DateTime?
+  lastInboundAt   DateTime? // drives WhatsApp's 24h session window
+  createdAt       DateTime            @default(now())
+  routines        Routine[]
+  occurrences     RoutineOccurrence[]
+  events          HealthEvent[]
+  messages        Message[]
+  alerts          Alert[]
+  notifications   Notification[]
+}
+
+enum RoutineType {
+  MEDICINE
+  WATER
+  BP
+  SUGAR
+  WALK
+  WELLBEING
+}
+
+enum Frequency {
+  DAILY // every day
+  WEEKLY // on the days in daysOfWeek (e.g. a Sunday sugar test)
+  INTERVAL // every intervalDays days, counted from startDate
+  MONTHLY // on dayOfMonth (29-31 fall back to the month's last day)
+}
+
+model Routine {
+  id                String              @id @default(cuid())
+  parentId          String
+  parent            ParentProfile       @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  type              RoutineType
+  name              String // "morning wali dawa"
+  timeOfDay         String // "HH:mm" in the parent's timezone
+  frequency         Frequency           @default(DAILY)
+  daysOfWeek        Int[] // WEEKLY: 1 = Mon … 7 = Sun
+  intervalDays      Int? // INTERVAL
+  startDate         String? // INTERVAL anchor, "YYYY-MM-DD" in the parent's timezone
+  dayOfMonth        Int? // MONTHLY
+  target            Int? // e.g. glasses of water per day
+  // Care rules. null = off.
+  followUpMinutes   Int?                @default(60) // one gentle follow-up to the parent
+  alertAfterMinutes Int?                @default(180) // tell the child if still not done
+  active            Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  occurrences       RoutineOccurrence[]
+  notifications     Notification[]
+}
+
+// One instance of a routine on one day. This is "the question waiting for an answer".
+enum OccurrenceStatus {
+  SCHEDULED // created, reminder not yet sent
+  SENT // reminder sent, waiting for a reply
+  DONE // parent confirmed
+  NOT_DONE // parent explicitly said no / not yet
+  NO_RESPONSE // day ended without a reply. Missing data, not a missed dose.
+}
+
+model RoutineOccurrence {
+  id             String           @id @default(cuid())
+  routineId      String
+  routine        Routine          @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  parentId       String
+  parent         ParentProfile    @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  localDate      String // "2026-10-16" in the parent's timezone
+  scheduledFor   DateTime
+  status         OccurrenceStatus @default(SCHEDULED)
+  sentAt         DateTime?
+  respondedAt    DateTime?
+  followUpAt     DateTime? // when the follow-up nudge went to the parent
+  childAlertedAt DateTime? // when the child was told it wasn't done
+  note           String? // "after breakfast"
+  events         HealthEvent[]
+
+  @@unique([routineId, localDate])
+  @@index([parentId, status])
+  @@index([parentId, localDate])
+}
+
+enum Direction {
+  IN
+  OUT
+}
+
+// Every WhatsApp message in either direction. The conversation log.
+model Message {
+  id           String         @id @default(cuid())
+  parentId     String?
+  parent       ParentProfile? @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  direction    Direction
+  toPhone      String?
+  body         String
+  kind         String // text | button | session | template | dropped
+  buttons      Json? // [{id,title}] offered on outbound messages
+  payload      String? // button id the parent tapped
+  waMessageId  String?        @unique // dedupe for webhook retries
+  handledBy    String? // RULES | LLM | BUTTON | NONE
+  occurrenceId String?
+  createdAt    DateTime       @default(now())
+  events       HealthEvent[]
+
+  @@index([parentId, createdAt])
+}
+
+enum EventType {
+  MEDICINE
+  BP
+  SUGAR
+  WATER
+  WEIGHT
+  WALK
+  WELLBEING
+  SYMPTOM
+}
+
+enum EventSource {
+  BUTTON
+  RULES
+  LLM
+  DASHBOARD
+}
+
+model HealthEvent {
+  id           String             @id @default(cuid())
+  parentId     String
+  parent       ParentProfile      @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  type         EventType
+  valueNum     Float? // systolic, sugar mg/dL, glasses, kg
+  valueNum2    Float? // diastolic
+  valueText    String? // "taken", "good", "knee pain"
+  unit         String?
+  context      String? // "after breakfast", "fasting", "since yesterday"
+  occurredAt   DateTime
+  source       EventSource
+  messageId    String?
+  message      Message?           @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  occurrenceId String?
+  occurrence   RoutineOccurrence? @relation(fields: [occurrenceId], references: [id], onDelete: SetNull)
+  createdAt    DateTime           @default(now())
+
+  @@index([parentId, type, occurredAt])
+}
+
+// Raised only by an explicit parent action (HELP / emergency button), never by AI.
+model Alert {
+  id             String        @id @default(cuid())
+  parentId       String
+  parent         ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  kind           String // EMERGENCY
+  messageId      String?
+  createdAt      DateTime      @default(now())
+  acknowledgedAt DateTime?
+}
+
+// What the child is told: things not done, silence, HELP, and updates when things resolve.
+model Notification {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId     String
+  parent       ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  routineId    String?
+  routine      Routine?      @relation(fields: [routineId], references: [id], onDelete: SetNull)
+  occurrenceId String?
+  kind         String // NOT_DONE | RESOLVED | SILENCE | HELP
+  title        String
+  body         String
+  dedupeKey    String        @unique // one notification per event, however often the rules run
+  createdAt    DateTime      @default(now())
+  readAt       DateTime?
+  whatsappAt   DateTime?
+
+  @@index([userId, createdAt])
+}
