@@ -4,7 +4,10 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
 import { prisma } from './lib/db.js';
-import { env, isDev } from './lib/env.js';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import fastifyStatic from '@fastify/static';
+import { env, isDemo, isDev } from './lib/env.js';
 import { authRoutes } from './routes/auth.js';
 import { devRoutes } from './routes/dev.js';
 import { parentRoutes } from './routes/parents.js';
@@ -23,7 +26,9 @@ declare module 'fastify' {
 }
 
 export async function buildApp() {
-  const app = Fastify({ logger: { level: 'info' } });
+  // Behind a host's proxy (Render), use the forwarded client address, or every visitor would
+  // share one IP and one rate limit.
+  const app = Fastify({ logger: { level: 'info' }, trustProxy: env.NODE_ENV === 'production' });
 
   await app.register(cors, { origin: env.WEB_ORIGIN });
   await app.register(jwt, { secret: env.JWT_SECRET });
@@ -50,7 +55,7 @@ export async function buildApp() {
 
   await app.register(
     async (api) => {
-      api.get('/health', async () => ({ ok: true, devTools: isDev }));
+      api.get('/health', async () => ({ ok: true, devTools: isDev, demo: isDemo }));
       await api.register(authRoutes);
       await api.register(parentRoutes);
       await api.register(webhookRoutes);
@@ -58,5 +63,14 @@ export async function buildApp() {
     },
     { prefix: '/api' },
   );
+
+  // In a deployment the built website is served from here too: one service, one URL.
+  const web = fileURLToPath(new URL('../../web/dist', import.meta.url));
+  if (existsSync(web)) {
+    await app.register(fastifyStatic, { root: web, wildcard: false });
+    app.setNotFoundHandler((req, reply) =>
+      req.url.startsWith('/api/') ? reply.code(404).send({ error: 'Not found' }) : reply.sendFile('index.html'),
+    );
+  }
   return app;
 }

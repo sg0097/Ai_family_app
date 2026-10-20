@@ -1,0 +1,48 @@
+# Render Blueprint: Dashboard → New → Blueprint → pick this repo.
+# Creates the app (API + reminder workers + website in one service), Postgres and Redis.
+# This is a DEMO deployment: WhatsApp is simulated and the UI says so. For real parents,
+# switch to APP_MODE=live with WHATSAPP_PROVIDER=meta and the META_* secrets (see README).
+
+services:
+  - type: web
+    name: family-care
+    runtime: node
+    region: singapore
+    plan: free
+    # Dev dependencies (TypeScript, Vite, Prisma CLI) are needed to build and to run migrations.
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run start:prod -w server
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: NODE_ENV
+        value: production
+      - key: APP_MODE
+        value: demo
+      - key: WHATSAPP_PROVIDER
+        value: fake
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: family-care-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: family-care-redis
+          property: connectionString
+
+  - type: keyvalue
+    name: family-care-redis
+    region: singapore
+    plan: free
+    # BullMQ (reminders queue) needs keys never to be evicted.
+    maxmemoryPolicy: noeviction
+    ipAllowList: [] # reachable only from inside Render
+
+databases:
+  - name: family-care-db
+    region: singapore
+    plan: free

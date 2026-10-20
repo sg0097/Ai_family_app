@@ -14,6 +14,7 @@ import type { FamilyMember, User } from './types';
 interface Session {
   user: User | null;
   devTools: boolean;
+  demo: boolean;
   family: FamilyMember[] | null;
   refreshFamily: () => Promise<void>;
   signIn: (token: string, user: User) => void;
@@ -28,6 +29,7 @@ export function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(Boolean(getToken()));
   const [devTools, setDevTools] = useState(false);
+  const [demo, setDemo] = useState(false);
   const [family, setFamily] = useState<FamilyMember[] | null>(null);
 
   const refreshFamily = async () => {
@@ -35,7 +37,7 @@ export function App() {
   };
 
   useEffect(() => {
-    api<{ devTools: boolean }>('/health').then((h) => setDevTools(h.devTools)).catch(() => {});
+    api<{ devTools: boolean; demo?: boolean }>('/health').then((h) => { setDevTools(h.devTools); setDemo(Boolean(h.demo)); }).catch(() => {});
     if (getToken()) api<User>('/me').then(setUser).catch(() => setToken(null)).finally(() => setLoading(false));
   }, []);
   useEffect(() => {
@@ -53,6 +55,7 @@ export function App() {
   const session: Session = {
     user,
     devTools,
+    demo,
     family,
     refreshFamily,
     signIn: (token, u) => {
@@ -70,6 +73,7 @@ export function App() {
   const guard = (el: JSX.Element) => (user ? <AppShell>{el}</AppShell> : <Navigate to="/login" replace />);
   return (
     <SessionContext.Provider value={session}>
+      {demo && <DemoBanner />}
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={user ? <Navigate to="/app" replace /> : <AuthPage mode="login" />} />
@@ -195,5 +199,14 @@ function DeleteAccount({ onClose }: { onClose: () => void }) {
         </div>
       </form>
     </Modal>
+  );
+}
+
+/** A hosted demo must never be mistaken for the real service. */
+function DemoBanner() {
+  return (
+    <div className="demo-banner" role="note">
+      <b>Demo</b> WhatsApp messages here are simulated and never sent to real phones. Please don’t enter real health details.
+    </div>
   );
 }

@@ -104,6 +104,17 @@ These are deliberate; keep them when changing the product.
 - **Limits.** Sign-in is rate-limited (10 per 15 min) and so is Ask (30 per hour). Logs never contain message text, AI answers or full phone numbers.
 - **Production refuses unsafe config:** a weak `JWT_SECRET`, the fake WhatsApp provider, or a missing `META_APP_SECRET` (set `NODE_ENV=production`). The simulator and demo routes are never enabled in production.
 
+## Deploying (Render)
+
+`render.yaml` sets up everything: one web service (API + reminder workers + website), Postgres and Redis, in Singapore.
+
+1. Render dashboard → **New → Blueprint** → pick this repo → **Apply**.
+2. Wait for the build to finish (about 5 minutes). The app is at `https://family-care-<random>.onrender.com`.
+
+This first deployment is a **demo** (`APP_MODE=demo`): WhatsApp is simulated, a banner says so, and the phone simulator and demo data are available. There's no AI model online, so Ask shows the records instead of a summary. On the free plan the service sleeps when idle (reminders pause until someone opens the site), and the free database expires after 30 days.
+
+For real parents: set `APP_MODE=live`, `WHATSAPP_PROVIDER=meta` and the `META_*` secrets, and move to paid plans. Production refuses to start with a half-safe setup.
+
 ## Going live on WhatsApp
 
 1. Create a WhatsApp Business app in Meta, then set `WHATSAPP_PROVIDER=meta` and the `META_*` vars.

@@ -792,3 +792,7 @@ html { scroll-behavior: smooth; }
 
 .logo { white-space: nowrap; }
 @media (max-width: 640px) { .check-state { flex-wrap: wrap; } }
+
+.demo-banner { background: var(--haldi-soft); color: var(--ink); text-align: center; font-size: 0.86rem; padding: 7px 16px; border-bottom: 1px solid var(--line); }
+.demo-banner b { border: 1.5px solid currentColor; border-radius: 4px; padding: 0 6px; margin-right: 8px; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; }
+@media print { .demo-banner { display: none; } }
