@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useSession } from '../App';
 import { Logo } from '../components/ui';
@@ -8,7 +8,9 @@ import type { User } from '../types';
 
 export function AuthPage({ mode }: { mode: 'signup' | 'login' }) {
   const { signIn } = useSession();
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [params] = useSearchParams();
+  const [form, setForm] = useState({ name: '', email: params.get('email') ?? '', password: '' });
+  const keep = params.toString() ? `?${params.toString()}` : '';
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -65,7 +67,7 @@ export function AuthPage({ mode }: { mode: 'signup' | 'login' }) {
               minLength={mode === 'signup' ? 8 : undefined}
               autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
             />
-            {mode === 'signup' && <p className="hint">At least 8 characters.</p>}
+            {mode === 'signup' ? <p className="hint">At least 8 characters.</p> : <p className="hint"><Link to="/forgot" className="link-btn">Forgot password?</Link></p>}
           </div>
           {error && <p className="error" style={{ marginTop: 14 }}>{error}</p>}
           <button type="submit" className="btn lg" disabled={busy} style={{ width: '100%', marginTop: 22 }}>
@@ -73,7 +75,7 @@ export function AuthPage({ mode }: { mode: 'signup' | 'login' }) {
           </button>
           <p className="muted small" style={{ marginTop: 18, textAlign: 'center' }}>
             {mode === 'signup' ? 'Already have an account? ' : 'New here? '}
-            <Link to={mode === 'signup' ? '/login' : '/signup'} className="link-btn">{mode === 'signup' ? 'Sign in' : 'Create an account'}</Link>
+            <Link to={`${mode === 'signup' ? '/login' : '/signup'}${keep}`} className="link-btn">{mode === 'signup' ? 'Sign in' : 'Create an account'}</Link>
           </p>
         </form>
       </div>

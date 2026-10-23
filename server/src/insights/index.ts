@@ -129,7 +129,7 @@ export async function todayView(parentId: string) {
   if (wellbeingToday === 'low') attention.push({ kind: 'wellbeing', text: `${parent.name} said they're not feeling good today` });
 
   return {
-    parent: { id: parent.id, name: parent.name, relationship: parent.relationship, phone: parent.phone, timezone: zone, consentStatus: parent.consentStatus },
+    parent: { id: parent.id, name: parent.name, relationship: parent.relationship, phone: parent.phone, timezone: zone, consentStatus: parent.consentStatus, language: parent.language },
     date: today,
     lastInboundAt: parent.lastInboundAt,
     routines,

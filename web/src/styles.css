@@ -796,3 +796,47 @@ html { scroll-behavior: smooth; }
 .demo-banner { background: var(--haldi-soft); color: var(--ink); text-align: center; font-size: 0.86rem; padding: 7px 16px; border-bottom: 1px solid var(--line); }
 .demo-banner b { border: 1.5px solid currentColor; border-radius: 4px; padding: 0 6px; margin-right: 8px; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; }
 @media print { .demo-banner { display: none; } }
+
+/* ── Care page ── */
+.report-cta { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-left: 5px solid var(--indigo); border-radius: 6px var(--radius) var(--radius) 6px; }
+.med-list, .appt-list, .notes, .symptom-log, .team-list { list-style: none; margin: 10px 0 0; padding: 0; }
+.med { display: grid; grid-template-columns: 40px 1fr auto; gap: 14px; align-items: start; padding: 14px 0; border-top: 1px solid var(--line); }
+.med:first-child { border-top: 0; }
+.med.paused { opacity: 0.55; }
+.med-name { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; }
+.med-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.med-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.stock { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.stock-bar { width: 120px; height: 6px; border-radius: 3px; background: var(--idle-soft); overflow: hidden; flex: none; }
+.stock-bar span { display: block; height: 100%; background: var(--ok); border-radius: 3px; transition: width 0.5s var(--ease); }
+.stock-bar span.low { background: var(--haldi); }
+.warn-text { color: var(--warn-ink); font-weight: 600; }
+.appt { display: flex; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+.appt:first-child { border-top: 0; }
+.appt.cancelled { opacity: 0.55; }
+.appt-date { flex: none; width: 52px; height: 56px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.appt-date b { font-family: var(--font-display); font-size: 1.35rem; }
+.appt-title { font-weight: 600; }
+details.past { margin-top: 12px; }
+details.past summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
+.note-form { display: flex; gap: 8px; }
+.notes li { padding: 12px 14px; border-radius: 4px 14px 14px 14px; background: var(--surface-2); margin-top: 8px; }
+.notes li.pinned { background: var(--haldi-soft); }
+.notes li p { margin-bottom: 4px; }
+:root[data-theme='dark'] .notes li.pinned { color: var(--ink); }
+
+/* ── Doctor report ── */
+.doc-head { border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 14px; }
+.doc-note { font-size: 0.86rem; color: var(--ink-2); background: var(--surface-2); padding: 10px 14px; border-radius: 8px; }
+.doc-h { margin: 26px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); font-size: 1.15rem; }
+.symptom-log li { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 7px 0; border-top: 1px dashed var(--line); }
+.symptom-log li:first-child { border-top: 0; }
+.quote-inline { font-family: var(--font-hand); font-size: 1.05rem; }
+@media print { .doc { border: 0 !important; padding: 0 !important; } }
+@media (max-width: 640px) { .med { grid-template-columns: 40px 1fr; } .med-actions { grid-column: 2; flex-direction: row; align-items: center; } .symptom-log li { grid-template-columns: 1fr; gap: 2px; } }
+
+.team-list li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.team-list li:first-child { border-top: 0; }
+.invite-link { margin-top: 14px; padding: 14px; border-radius: 10px; background: var(--surface-2); }
+
+.narrow-page { max-width: 520px; margin: 0 auto; padding: 48px 16px 64px; }

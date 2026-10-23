@@ -17,6 +17,7 @@ export interface ParentSummary {
   phone: string;
   consentStatus: ConsentStatus;
   timezone: string;
+  language?: Language;
 }
 
 export type Frequency = 'DAILY' | 'WEEKLY' | 'INTERVAL' | 'MONTHLY';
@@ -35,6 +36,7 @@ export interface CareFields {
 
 export interface Routine extends ScheduleFields, CareFields {
   id: string;
+  medicineId: string | null;
   type: RoutineType;
   name: string;
   timeOfDay: string;
@@ -45,6 +47,7 @@ export interface Routine extends ScheduleFields, CareFields {
 
 export interface RoutineInput extends ScheduleFields, CareFields {
   type: RoutineType;
+  medicineId?: string | null;
   name: string;
   timeOfDay: string;
   target?: number | null;
@@ -52,7 +55,7 @@ export interface RoutineInput extends ScheduleFields, CareFields {
 
 export interface AppNotification {
   id: string;
-  kind: 'NOT_DONE' | 'RESOLVED' | 'SILENCE' | 'HELP' | 'REPORT' | 'SYMPTOM';
+  kind: 'NOT_DONE' | 'RESOLVED' | 'SILENCE' | 'HELP' | 'REPORT' | 'SYMPTOM' | 'REFILL' | 'APPOINTMENT' | 'TEAM';
   title: string;
   body: string;
   createdAt: string;
@@ -122,6 +125,8 @@ export interface Today {
     weight: { value: string; at: string } | null;
     waterToday: { glasses: number; goal: number | null; at: string } | null;
   };
+  appointments: { id: string; title: string; place: string | null; at: string }[];
+  pinnedNotes: { id: string; text: string; author: string | null }[];
 }
 
 
@@ -191,6 +196,9 @@ export interface ParentProfile {
   phone: string;
   timezone: string;
   emergencyNumber: string;
+  language: Language;
+  isOwner: boolean;
+  ownerName: string;
   consentStatus: ConsentStatus;
   consentAt: string | null;
   createdAt: string;
@@ -226,3 +234,67 @@ export interface WeeklyReport {
   missing: string[];
   contact: { daysHeardFrom: number; helpAlerts: number; notDoneAlerts: number };
 }
+
+export type Language = 'HINGLISH' | 'HINDI' | 'ENGLISH';
+export const LANGUAGE_LABEL: Record<Language, string> = { HINGLISH: 'Hinglish', HINDI: 'हिंदी (Hindi)', ENGLISH: 'English' };
+
+export interface Medicine {
+  id: string;
+  name: string;
+  dose: string | null;
+  instructions: string | null;
+  prescribedBy: string | null;
+  pillsLeft: number | null;
+  pillsPerDose: number;
+  refillAlertDays: number;
+  refilledAt: string | null;
+  active: boolean;
+  daysLeft: number | null;
+  routines: Routine[];
+}
+
+export interface Appointment {
+  id: string;
+  title: string;
+  place: string | null;
+  at: string;
+  notes: string | null;
+  remindParent: boolean;
+  status: 'UPCOMING' | 'DONE' | 'CANCELLED';
+}
+
+export interface CareNote {
+  id: string;
+  text: string;
+  pinned: boolean;
+  createdAt: string;
+  author: { id: string; name: string } | null;
+}
+
+export interface Team {
+  isOwner: boolean;
+  me: string;
+  owner: { id: string; name: string; email: string };
+  members: { id: string; name: string; email: string; since: string }[];
+  invites: { id: string; email: string; createdAt: string; expiresAt: string; link: string }[];
+}
+
+export interface DoctorReport {
+  parent: { name: string; relationship: string };
+  preparedBy: string[];
+  generatedAt: string;
+  range: { from: string; to: string; days: number };
+  medicines: { name: string; dose: string | null; instructions: string | null; prescribedBy: string | null; reminders: string[]; taken: { done: number; notYet: number; noReply: number } }[];
+  readings: {
+    bp: { at: string; value: string; context: string | null }[];
+    bpStats: { systolic: Stats | null; diastolic: Stats | null } | null;
+    sugar: { at: string; value: number; context: string | null }[];
+    sugarStats: Stats | null;
+    weight: { at: string; value: number }[];
+  };
+  symptoms: { at: string; name: string | null; since: string | null; words: string | null }[];
+  wellbeing: { good: number; okay: number; low: number };
+  appointments: { at: string; title: string; place: string | null; status: string; notes: string | null }[];
+  notes: { text: string; pinned: boolean; at: string; author: string | null }[];
+}
+export interface Stats { min: number; max: number; avg: number }

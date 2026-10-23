@@ -64,6 +64,26 @@ export function TodayPage() {
         </section>
       )}
 
+      {today.appointments.length > 0 && (
+        <section className="card">
+          <div className="spread" style={{ marginBottom: 12 }}>
+            <h2>Coming up</h2>
+            <Link to="care" className="link-btn small">Care →</Link>
+          </div>
+          <ul className="appt-list">
+            {today.appointments.map((a) => (
+              <li key={a.id} className="appt upcoming">
+                <span className="appt-date"><b>{fmtDate(a.at, { day: 'numeric' }, p.timezone)}</b><span className="tiny">{fmtDate(a.at, { month: 'short' }, p.timezone)}</span></span>
+                <div>
+                  <div className="appt-title">{a.title}</div>
+                  <div className="tiny">{fmtDate(a.at, { weekday: 'long' }, p.timezone)} · {fmtClock(a.at, p.timezone)}{a.place ? ` · ${a.place}` : ''}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {hasReminders && (
         <div className="two-col">
           <LatestReadings today={today} />
@@ -73,10 +93,17 @@ export function TodayPage() {
 
       <FromParent />
 
-      {goodToKnow.length > 0 && (
+      {(goodToKnow.length > 0 || today.pinnedNotes.length > 0) && (
         <section className="card">
           <h2 style={{ marginBottom: 12 }}>Good to know</h2>
-          <ul className="plain-list">{goodToKnow.map((a, i) => <li key={i}>{a.text}</li>)}</ul>
+          {goodToKnow.length > 0 && <ul className="plain-list">{goodToKnow.map((a, i) => <li key={i}>{a.text}</li>)}</ul>}
+          {today.pinnedNotes.length > 0 && (
+            <ul className="notes" style={{ marginTop: goodToKnow.length ? 14 : 0 }}>
+              {today.pinnedNotes.map((n) => (
+                <li key={n.id} className="pinned"><p>{n.text}</p><span className="tiny">{n.author ?? 'Family'} · pinned note</span></li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 
@@ -85,7 +112,7 @@ export function TodayPage() {
       <Link to="report" className="next-link">See {p.name}’s weekly report →</Link>
 
       {dialog && (
-        <ReminderDialog parentId={id} parentName={p.name} routine={dialog.routine} start={dialog.start} onClose={() => setDialog(null)}
+        <ReminderDialog parentId={id} parentName={p.name} language={p.language ?? 'HINGLISH'} routine={dialog.routine} start={dialog.start} onClose={() => setDialog(null)}
           onSaved={(m) => { setDialog(null); show(m); reload(); routines.reload(); }} />
       )}
       <Toast message={toast} />

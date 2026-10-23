@@ -6,7 +6,7 @@ import { useApi } from '../hooks';
 import type { AppNotification } from '../types';
 import { Icon, type IconName } from './Icon';
 
-const ICON: Record<AppNotification['kind'], IconName> = { NOT_DONE: 'clock', RESOLVED: 'check', SILENCE: 'message', HELP: 'alert', REPORT: 'report', SYMPTOM: 'bandage' };
+const ICON: Record<AppNotification['kind'], IconName> = { NOT_DONE: 'clock', RESOLVED: 'check', SILENCE: 'message', HELP: 'alert', REPORT: 'report', SYMPTOM: 'bandage', REFILL: 'pill', APPOINTMENT: 'calendar', TEAM: 'heart' };
 
 /** The child's alerts: things not done, silence, HELP, and "it's sorted" updates. */
 export function NotificationBell() {

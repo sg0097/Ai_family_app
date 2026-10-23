@@ -173,5 +173,29 @@ export async function seedDemoParent(userId: string) {
     if (at > now) continue;
     await prisma.message.create({ data: { parentId: parent.id, direction, body, kind: direction === 'IN' ? 'text' : 'session', handledBy, toPhone: direction === 'OUT' ? phone : null, createdAt: at.toJSDate() } });
   }
+  // Medicines as prescribed, linked to the two medicine reminders; one is running low.
+  const morning = routines.find((r) => r.name === 'morning wali dawa')!;
+  const night = routines.find((r) => r.name === 'raat wali dawa')!;
+  const telma = await prisma.medicine.create({
+    data: { parentId: parent.id, name: 'Telma 40', dose: '1 tablet', instructions: 'after breakfast', prescribedBy: 'Dr. Mehta', pillsLeft: 24, refilledAt: now.minus({ days: 6 }).toJSDate() },
+  });
+  const metformin = await prisma.medicine.create({
+    data: { parentId: parent.id, name: 'Metformin 500', dose: '1 tablet', instructions: 'after dinner', prescribedBy: 'Dr. Mehta', pillsLeft: 4, refilledAt: now.minus({ days: 26 }).toJSDate() },
+  });
+  await prisma.routine.update({ where: { id: morning.id }, data: { medicineId: telma.id } });
+  await prisma.routine.update({ where: { id: night.id }, data: { medicineId: metformin.id } });
+
+  await prisma.appointment.createMany({
+    data: [
+      { parentId: parent.id, title: 'Dr. Mehta (heart)', place: 'Fortis, Noida', at: now.plus({ days: 3 }).set({ hour: 11, minute: 0, second: 0, millisecond: 0 }).toJSDate(), notes: 'Take the BP diary and last blood test' },
+      { parentId: parent.id, title: 'Eye check-up', place: 'Centre for Sight', at: now.minus({ days: 20 }).set({ hour: 10, minute: 30, second: 0, millisecond: 0 }).toJSDate(), status: 'DONE', notes: 'New reading glasses ordered' },
+    ],
+  });
+  await prisma.careNote.createMany({
+    data: [
+      { parentId: parent.id, authorId: userId, text: 'Doctor said: less salt, and a 20-minute walk every evening.', pinned: true, createdAt: now.minus({ days: 20 }).toJSDate() },
+      { parentId: parent.id, authorId: userId, text: 'Calls are best after 7 PM, after her serial.', createdAt: now.minus({ days: 9 }).toJSDate() },
+    ],
+  });
   return parent;
 }

@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { api } from '../api';
 import { ROUTINE_LABEL, fmtTime } from '../format';
-import { reminderPreview } from '../reminderCopy';
-import type { Routine, RoutineInput, RoutineType } from '../types';
+import { useApi, useReminderPreview } from '../hooks';
+import type { Language, Medicine, Routine, RoutineInput, RoutineType } from '../types';
 import { RoutineIcon } from './Icon';
 import { CARE_DEFAULTS, CarePicker, FrequencyPicker } from './RoutineForm';
 import { Modal } from './ui';
@@ -42,6 +42,7 @@ export function missingSuggestions(existing: { type: RoutineType; name: string }
 interface Props {
   parentId: string;
   parentName: string;
+  language: Language;
   /** Edit this reminder; otherwise add a new one starting from `start`. */
   routine?: Routine;
   start?: RoutineInput;
@@ -49,24 +50,35 @@ interface Props {
   onSaved: (message: string) => void;
 }
 
-export function ReminderDialog({ parentId, parentName, routine, start, onClose, onSaved }: Props) {
+export function ReminderDialog({ parentId, parentName, language, routine, start, onClose, onSaved }: Props) {
   const editing = Boolean(routine);
   const [f, setF] = useState<RoutineInput>(routine ?? start ?? blankReminder('MEDICINE'));
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const preview = reminderPreview(f.type, parentName, f.name, f.frequency);
+  const medicines = useApi<Medicine[]>(`/parents/${parentId}/medicines`);
+  const activeMeds = medicines.data?.filter((m) => m.active) ?? [];
+  const linked = activeMeds.find((m) => m.id === f.medicineId) ?? null;
+  const preview = useReminderPreview({
+    parentName,
+    language,
+    type: f.type,
+    name: f.name,
+    frequency: f.frequency,
+    medicine: f.type === 'MEDICINE' && linked ? { name: linked.name, dose: linked.dose } : null,
+  });
 
   async function save(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setErr('');
     const { type, name, timeOfDay, frequency, daysOfWeek, intervalDays, dayOfMonth, followUpMinutes, alertAfterMinutes, target } = f;
+    const medicineId = type === 'MEDICINE' ? f.medicineId ?? null : null;
     try {
       if (routine) {
-        await api(`/routines/${routine.id}`, { method: 'PATCH', body: { name, timeOfDay, frequency, daysOfWeek, intervalDays, dayOfMonth, followUpMinutes, alertAfterMinutes, target } });
+        await api(`/routines/${routine.id}`, { method: 'PATCH', body: { name, timeOfDay, frequency, daysOfWeek, intervalDays, dayOfMonth, followUpMinutes, alertAfterMinutes, target, medicineId } });
         onSaved('Reminder updated');
       } else {
-        await api(`/parents/${parentId}/routines`, { body: { type, name, timeOfDay, frequency, daysOfWeek, intervalDays, dayOfMonth, followUpMinutes, alertAfterMinutes, target } });
+        await api(`/parents/${parentId}/routines`, { body: { type, name, timeOfDay, frequency, daysOfWeek, intervalDays, dayOfMonth, followUpMinutes, alertAfterMinutes, target, medicineId } });
         onSaved(`Reminder added for ${fmtTime(timeOfDay)}`);
       }
     } catch (e2) {
@@ -99,6 +111,15 @@ export function ReminderDialog({ parentId, parentName, routine, start, onClose, 
             <input className="input" id="rd-time" type="time" value={f.timeOfDay} onChange={(e) => setF({ ...f, timeOfDay: e.target.value })} required />
           </div>
         </div>
+        {f.type === 'MEDICINE' && activeMeds.length > 0 && (
+          <div>
+            <label className="field-label" htmlFor="rd-med">Which medicine? <span className="muted">(optional; adds the name and dose to the message)</span></label>
+            <select className="input" id="rd-med" value={f.medicineId ?? ''} onChange={(e) => setF({ ...f, medicineId: e.target.value || null })}>
+              <option value="">Not linked</option>
+              {activeMeds.map((m) => <option key={m.id} value={m.id}>{m.name}{m.dose ? ` · ${m.dose}` : ''}</option>)}
+            </select>
+          </div>
+        )}
         <div>
           <span className="field-label">How often</span>
           <FrequencyPicker value={f} onChange={(v) => setF({ ...f, ...v })} />
@@ -115,9 +136,9 @@ export function ReminderDialog({ parentId, parentName, routine, start, onClose, 
         </div>
         <div className="preview-box" aria-label="What they will see on WhatsApp">
           <span className="tiny">{parentName} will get on WhatsApp</span>
-          <div className="wa them" style={{ animation: 'none', marginTop: 6 }}>
-            {preview.text}
-            {preview.buttons && <div className="btns">{preview.buttons.map((b) => <span key={b}>{b}</span>)}</div>}
+          <div className="wa them" style={{ animation: 'none', marginTop: 6, minHeight: 38 }}>
+            {preview?.text ?? '…'}
+            {preview && preview.buttons.length > 0 && <div className="btns">{preview.buttons.map((b) => <span key={b}>{b}</span>)}</div>}
           </div>
         </div>
         {err && <p className="error">{err}</p>}

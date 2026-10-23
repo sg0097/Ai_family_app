@@ -1,7 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { DateTime } from 'luxon';
 import { z } from 'zod';
+import type { Medicine, ParentProfile, Routine } from '@prisma/client';
 import { daysLeft } from '../care/refill.js';
+import { consentRequest, reminder } from '../conversation/copy.js';
 import { doctorReport } from '../insights/doctorReport.js';
 import { accessibleBy } from '../lib/access.js';
 import { prisma } from '../lib/db.js';
@@ -152,6 +154,33 @@ export async function careRoutes(app: FastifyInstance) {
     if (note.authorId !== req.user.sub && note.parent.userId !== req.user.sub) throw new HttpError(403, 'Only the person who wrote this note can delete it');
     await prisma.careNote.delete({ where: { id: note.id } });
     return reply.code(204).send();
+  });
+
+  /** The exact WhatsApp message a reminder will send, built by the same code that sends it. */
+  app.post('/preview/reminder', async (req) => {
+    const b = z
+      .object({
+        parentName: text(40),
+        language: z.enum(['HINGLISH', 'HINDI', 'ENGLISH']).default('HINGLISH'),
+        type: z.enum(['MEDICINE', 'WATER', 'BP', 'SUGAR', 'WALK', 'WELLBEING']),
+        name: z.string().trim().max(40).default(''),
+        frequency: z.enum(['DAILY', 'WEEKLY', 'INTERVAL', 'MONTHLY']).default('DAILY'),
+        medicine: z.object({ name: text(60), dose: optional(60) }).nullish(),
+      })
+      .parse(req.body);
+    const placeholder = { MEDICINE: 'dawa', BP: 'BP check', SUGAR: 'sugar test', WATER: 'paani', WALK: 'walk', WELLBEING: 'kaisa feel' }[b.type];
+    const parent = { name: b.parentName, language: b.language } as ParentProfile;
+    const routine = { type: b.type, name: b.name || placeholder, frequency: b.frequency, medicine: b.medicine ? ({ name: b.medicine.name, dose: b.medicine.dose } as Medicine) : null } as Routine & { medicine: Medicine | null };
+    const { session } = reminder(parent, routine, 'preview');
+    return { text: session.text, buttons: session.buttons?.map((x) => x.title) ?? [] };
+  });
+
+  /** The first WhatsApp message a new parent gets (the invite to start). */
+  app.post('/preview/consent', async (req) => {
+    const b = z.object({ parentName: text(40), language: z.enum(['HINGLISH', 'HINDI', 'ENGLISH']).default('HINGLISH') }).parse(req.body);
+    const me = await prisma.user.findUniqueOrThrow({ where: { id: req.user.sub } });
+    const { session } = consentRequest({ name: b.parentName, language: b.language } as ParentProfile, me.name);
+    return { text: session.text, buttons: session.buttons?.map((x) => x.title) ?? [] };
   });
 
   // ── Doctor visit report ──

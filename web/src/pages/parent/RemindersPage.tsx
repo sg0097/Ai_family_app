@@ -109,7 +109,7 @@ export function RemindersPage() {
       )}
 
       {dialog && (
-        <ReminderDialog parentId={id} parentName={name} routine={dialog.routine} start={dialog.start} onClose={() => setDialog(null)}
+        <ReminderDialog parentId={id} parentName={name} language={today.parent.language ?? 'HINGLISH'} routine={dialog.routine} start={dialog.start} onClose={() => setDialog(null)}
           onSaved={(m) => { setDialog(null); show(m); refresh(); }} />
       )}
       <Toast message={toast} />

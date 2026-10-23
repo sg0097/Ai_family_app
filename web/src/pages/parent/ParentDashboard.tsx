@@ -10,6 +10,8 @@ import type { Today } from '../../types';
 import { HistoryPage } from './HistoryPage';
 import { SettingsPage } from './SettingsPage';
 import { TodayPage } from './TodayPage';
+import { CarePage } from './CarePage';
+import { DoctorReportPage } from './DoctorReportPage';
 import { RemindersPage } from './RemindersPage';
 import { ReportPage } from './ReportPage';
 
@@ -24,6 +26,7 @@ export const useParent = () => useContext(ParentCtx);
 const TABS = [
   ['', 'Today'],
   ['reminders', 'Reminders'],
+  ['care', 'Care'],
   ['report', 'Weekly report'],
   ['history', 'History'],
   ['settings', 'Settings'],
@@ -71,6 +74,8 @@ export function ParentDashboard() {
         <Route index element={<TodayPage />} />
         <Route path="reminders" element={<RemindersPage />} />
         <Route path="routines" element={<Navigate to="../reminders" replace />} />
+        <Route path="care" element={<CarePage />} />
+        <Route path="doctor-report" element={<DoctorReportPage />} />
         <Route path="report" element={<ReportPage />} />
         <Route path="week" element={<Navigate to="../report" replace />} />
         <Route path="history" element={<HistoryPage />} />

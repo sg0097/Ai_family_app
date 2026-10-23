@@ -18,7 +18,8 @@ const inviteLink = (token: string) => `${appUrl()}/invite/${token}`;
 export async function teamRoutes(app: FastifyInstance) {
   app.addHook('preHandler', async (req, reply) => {
     // Opening an invite link works signed out (it shows who invited you); everything else needs sign-in.
-    if (req.method === 'GET' && req.routeOptions.url === '/invites/:token') return;
+    // (routeOptions.url includes the /api prefix, so match the end.)
+    if (req.method === 'GET' && req.routeOptions.url?.endsWith('/invites/:token')) return;
     return app.authenticate(req, reply);
   });
 

@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { Link, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { api, getToken, setToken } from './api';
 import { NotificationBell } from './components/NotificationBell';
 import { Avatar, Logo, Modal } from './components/ui';
 import { browserTimeZone } from './format';
+import { ForgotPage, InvitePage, ResetPage } from './pages/AccountPages';
 import { AuthPage } from './pages/AuthPage';
 import { FamilyPage } from './pages/FamilyPage';
 import { Landing } from './pages/Landing';
@@ -76,8 +77,11 @@ export function App() {
       {demo && <DemoBanner />}
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/login" element={user ? <Navigate to="/app" replace /> : <AuthPage mode="login" />} />
-        <Route path="/signup" element={user ? <Navigate to="/app" replace /> : <AuthPage mode="signup" />} />
+        <Route path="/login" element={user ? <AfterAuth /> : <AuthPage mode="login" />} />
+        <Route path="/signup" element={user ? <AfterAuth /> : <AuthPage mode="signup" />} />
+        <Route path="/forgot" element={<ForgotPage />} />
+        <Route path="/reset/:token" element={<ResetPage />} />
+        <Route path="/invite/:token" element={<InvitePage />} />
         <Route path="/app" element={guard(<FamilyPage />)} />
         <Route path="/app/new" element={guard(<OnboardingPage />)} />
         <Route path="/app/p/:id/*" element={guard(<ParentDashboard />)} />
@@ -209,4 +213,11 @@ function DemoBanner() {
       <b>Demo</b> WhatsApp messages here are simulated and never sent to real phones. Please don’t enter real health details.
     </div>
   );
+}
+
+/** After signing in, go back where the person was headed (e.g. an invite link), never off-site. */
+function AfterAuth() {
+  const [params] = useSearchParams();
+  const next = params.get('next');
+  return <Navigate to={next && next.startsWith('/') && !next.startsWith('//') ? next : '/app'} replace />;
 }

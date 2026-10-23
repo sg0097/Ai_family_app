@@ -45,3 +45,19 @@ export function useToast() {
   return { toast: msg, show: setMsg };
 }
 
+
+/** A WhatsApp message exactly as the server will send it (debounced while typing). */
+export function usePreview(path: '/preview/reminder' | '/preview/consent', input: object) {
+  const [preview, setPreview] = useState<{ text: string; buttons: string[] } | null>(null);
+  const key = JSON.stringify(input);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      api<{ text: string; buttons: string[] }>(path, { body: JSON.parse(key) }).then(setPreview).catch(() => {});
+    }, 250);
+    return () => clearTimeout(t);
+  }, [path, key]);
+  return preview;
+}
+
+export const useReminderPreview = (input: { parentName: string; language: string; type: string; name: string; frequency: string; medicine?: { name: string; dose: string | null } | null }) =>
+  usePreview('/preview/reminder', input);

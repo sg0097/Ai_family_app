@@ -28,10 +28,11 @@ The parent page answers one question first: **is she okay today, and do I need t
 | Tab | What's there |
 |---|---|
 | Today | Status line ("All good so far", "1 thing needs you" + Call), today's reminders (tap to change, + Add, Remind now), latest readings, this week so far, the parent's last words, Good to know, Ask. A new parent starts with "Set up reminders" |
+| Care | Medicines as prescribed (dose, instructions) with tablet counts and refill alerts; doctor visits with WhatsApp reminders the evening before and on the day; shared family notes; the **doctor visit report** (printable) |
 | Reminders | Every reminder with time, how often and its follow-up/alert rule; add, change (with a preview of the exact WhatsApp message) or pause; one-tap suggestions |
 | Weekly report | One-line summary, what changed, 4 at-a-glance numbers, the reminders grid, BP chart and exact readings, water, feelings, mentions, and what's not known. Browse past weeks, and **Save as PDF** to share or take to the doctor |
 | History | Charts, every record (add or remove), and the WhatsApp messages |
-| Settings | The parent's profile, timezone, emergency number, WhatsApp status, and removal |
+| Settings | Profile, timezone, emergency number, **message language** (Hinglish / हिंदी / English), the **care team** (invite siblings), WhatsApp status, removal |
 
 The status wording lives in one place (`web/src/status.ts`) so the family page and the parent page always agree.
 
@@ -82,6 +83,12 @@ Key ideas in the data model (`server/prisma/schema.prisma`):
 - **24h window.** `whatsapp/outbound.ts` sends a free-form message if the parent wrote in the last 24h, otherwise a pre-approved template (`conversation/copy.ts` names them).
 - **Implausible values are rejected** (e.g. BP 85/138). All plausible values are stored as reported, without interpretation.
 
+## Family and accounts
+
+- **Care team:** whoever adds a parent is the owner and can invite siblings by email. An invite only works for the email it was sent to, so a forwarded link can't give a stranger access. Everyone on the team sees the same dashboard and gets the same alerts. Members can leave; only the owner can remove the parent or people.
+- **Languages:** every WhatsApp message (reminders, follow-ups, replies, appointment reminders) is written in Hinglish, Hindi (Devanagari) or English (`conversation/copy.ts`). The reply rules understand Hindi-script answers such as "हाँ", "ले ली", "नहीं" and Devanagari digits. In-app previews are built by the same server code, so they always match.
+- **Password reset:** the emailed link works once, for an hour, and only its hash is stored. Resetting signs out every older session.
+
 ## Brand: "a letter from home"
 
 The look is deliberate, so new screens should follow it (tokens at the top of `web/src/styles.css`):
@@ -119,7 +126,7 @@ For real parents: set `APP_MODE=live`, `WHATSAPP_PROVIDER=meta` and the `META_*`
 
 1. Create a WhatsApp Business app in Meta, then set `WHATSAPP_PROVIDER=meta` and the `META_*` vars.
 2. Point the webhook to `https://<host>/api/webhooks/whatsapp` (signature-verified with `META_APP_SECRET`).
-3. Get these templates approved: `consent_request`, `routine_confirm`, `routine_followup`, `reading_request`, `wellbeing_check`, `child_update`. Parameters and buttons are listed in `server/src/conversation/copy.ts`.
+3. Get these templates approved, in each language you offer (`en` for Hinglish, `hi`, `en_GB`): `consent_request`, `routine_confirm`, `routine_followup`, `reading_request`, `wellbeing_check`, `appointment_reminder`, `child_update`. Parameters and buttons are listed in `server/src/conversation/copy.ts`.
 
 In production, run the API and workers separately with `ROLE=api` / `ROLE=worker`.
 

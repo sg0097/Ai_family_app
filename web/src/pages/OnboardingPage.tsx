@@ -3,19 +3,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useSession } from '../App';
 import { FrequencyPicker, describeFrequency } from '../components/RoutineForm';
-import { reminderPreview } from '../reminderCopy';
 import { Switch } from '../components/ui';
 import { Icon, RoutineIcon } from '../components/Icon';
 import { ROUTINE_LABEL, fmtTime } from '../format';
-import type { RoutineType, ScheduleFields } from '../types';
+import { usePreview } from '../hooks';
+import { LANGUAGE_LABEL, type Language, type RoutineType, type ScheduleFields } from '../types';
 
 const NAMES = [
-  ['Mummy', 'Mother', '👩'],
-  ['Papa', 'Father', '👨'],
-  ['Maa', 'Mother', '👩'],
-  ['Dadi', 'Grandmother', '👵'],
-  ['Nani', 'Grandmother', '👵'],
-  ['Dada', 'Grandfather', '👴'],
+  ['Mummy', 'Mother'],
+  ['Papa', 'Father'],
+  ['Maa', 'Mother'],
+  ['Dadi', 'Grandmother'],
+  ['Nani', 'Grandmother'],
+  ['Dada', 'Grandfather'],
 ] as const;
 
 interface Pick extends ScheduleFields {
@@ -37,10 +37,11 @@ const PICKS: Pick[] = [
 ];
 
 export function OnboardingPage() {
-  const { user, refreshFamily } = useSession();
+  const { refreshFamily } = useSession();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [who, setWho] = useState({ name: '', relationship: 'Mother' });
+  const [language, setLanguage] = useState<Language>('HINGLISH');
   const [phone, setPhone] = useState('');
   const [picks, setPicks] = useState(PICKS);
   const [focus, setFocus] = useState<RoutineType>('MEDICINE');
@@ -60,6 +61,7 @@ export function OnboardingPage() {
       const { id } = await api<{ id: string }>('/parents', {
         body: {
           ...who,
+          language,
           phone,
           routines: picks.filter((p) => p.on).map(({ type, name, timeOfDay, target, frequency, daysOfWeek, intervalDays, dayOfMonth }) => ({ type, name, timeOfDay, target, frequency, daysOfWeek, intervalDays, dayOfMonth })),
         },
@@ -76,13 +78,10 @@ export function OnboardingPage() {
   }
 
   const focused = picks.find((p) => p.type === focus) ?? picks[0];
-  const chat =
-    step === 0 || step === 1 || step === 3
-      ? {
-          text: `Namaste ${parentName} 🙏 ${user?.name} ne aapko AI Family Care se joda hai. Main aapko dawa, paani aur BP ki yaad dilaungi, aur aapke jawab ${user?.name} ko dikhenge. Kya shuru karein?`,
-          buttons: ['Haan, shuru karein', 'Nahi'],
-        }
-      : reminderPreview(focused.type, parentName, focused.name, focused.frequency);
+  // Both previews come from the server's own message code, in the chosen language.
+  const consentPreview = usePreview('/preview/consent', { parentName, language });
+  const reminderPrev = usePreview('/preview/reminder', { parentName, language, type: focused.type, name: focused.name, frequency: focused.frequency });
+  const chat = (step === 2 ? reminderPrev : consentPreview) ?? { text: '…', buttons: [] };
 
   return (
     <div className="onboard">
@@ -99,10 +98,9 @@ export function OnboardingPage() {
             <h1 style={{ margin: '8px 0 6px' }}>Who are we caring for?</h1>
             <p className="muted" style={{ marginBottom: 22 }}>Use the name you call them. Every message will start with it.</p>
             <div className="choice-grid">
-              {NAMES.map(([n, rel, e]) => (
+              {NAMES.map(([n, rel]) => (
                 <button key={n} type="button" className={`choice${who.name === n ? ' on' : ''}`} onClick={() => setWho({ name: n, relationship: rel })}>
-                  <span className="e">{e}</span>
-                  {n}
+                                    {n}
                 </button>
               ))}
             </div>
@@ -119,6 +117,15 @@ export function OnboardingPage() {
                   ))}
                 </select>
               </div>
+            </div>
+            <div style={{ marginTop: 18 }}>
+              <span className="field-label">Which language should messages be in?</span>
+              <div className="segmented" role="radiogroup" aria-label="Message language">
+                {(['HINGLISH', 'HINDI', 'ENGLISH'] as Language[]).map((l) => (
+                  <button key={l} type="button" role="radio" aria-checked={language === l} className={language === l ? 'on' : ''} onClick={() => setLanguage(l)}>{LANGUAGE_LABEL[l]}</button>
+                ))}
+              </div>
+              <p className="hint">You can see the first message on the right. This can be changed later.</p>
             </div>
           </>
         )}
@@ -205,9 +212,9 @@ export function OnboardingPage() {
             <div className="phone-body" style={{ justifyContent: 'flex-end' }}>
               <div key={chat.text} className="wa them">
                 {chat.text}
-                {chat.buttons && (
+                {chat.buttons.length > 0 && (
                   <div className="btns" style={{ flexDirection: chat.buttons.length > 2 ? 'column' : 'row' }}>
-                    {chat.buttons.map((b) => (
+                    {chat.buttons.map((b: string) => (
                       <span key={b}>{b}</span>
                     ))}
                   </div>
