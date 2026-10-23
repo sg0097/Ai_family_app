@@ -11,12 +11,14 @@ import { env, isDemo, isDev } from './lib/env.js';
 import { authRoutes } from './routes/auth.js';
 import { devRoutes } from './routes/dev.js';
 import { parentRoutes } from './routes/parents.js';
+import { teamRoutes } from './routes/team.js';
+import { careRoutes } from './routes/care.js';
 import { webhookRoutes } from './routes/webhooks.js';
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
-    payload: { sub: string };
-    user: { sub: string };
+    payload: { sub: string; v?: number };
+    user: { sub: string; v?: number };
   }
 }
 declare module 'fastify' {
@@ -40,8 +42,9 @@ export async function buildApp() {
     } catch {
       return reply.code(401).send({ error: 'Please sign in' });
     }
-    // A valid token for a deleted account is still a signed-out user.
-    if (!(await prisma.user.findUnique({ where: { id: req.user.sub }, select: { id: true } }))) {
+    // A deleted account, or a session from before a password reset, is signed out.
+    const user = await prisma.user.findUnique({ where: { id: req.user.sub }, select: { tokenVersion: true } });
+    if (!user || user.tokenVersion !== (req.user.v ?? 0)) {
       return reply.code(401).send({ error: 'Please sign in' });
     }
   });
@@ -58,6 +61,8 @@ export async function buildApp() {
       api.get('/health', async () => ({ ok: true, devTools: isDev, demo: isDemo }));
       await api.register(authRoutes);
       await api.register(parentRoutes);
+      await api.register(teamRoutes);
+      await api.register(careRoutes);
       await api.register(webhookRoutes);
       if (isDev) await api.register(devRoutes);
     },

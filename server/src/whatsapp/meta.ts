@@ -34,7 +34,7 @@ export class MetaWhatsApp implements WhatsAppProvider {
       messaging_product: 'whatsapp',
       to,
       type: 'template',
-      template: { name: tpl.name, language: { code: env.META_TEMPLATE_LANGUAGE }, components },
+      template: { name: tpl.name, language: { code: tpl.language ?? env.META_TEMPLATE_LANGUAGE }, components },
     });
   }
 

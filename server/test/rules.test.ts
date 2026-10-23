@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { consentAnswer, isEmergencyRequest, normalize, parseWithRules } from '../src/conversation/rules.js';
+import { consentAnswer, isEmergencyRequest, isStopRequest, normalize, parseWithRules } from '../src/conversation/rules.js';
 
 describe('parseWithRules — PRD examples', () => {
   it('confirms medicine with context', () => {
@@ -45,6 +45,22 @@ describe('parseWithRules — yes / no', () => {
 
   it('is not confident about chit-chat', () => {
     expect(parseWithRules('Kaise ho beta?').confident).toBe(false);
+  });
+});
+
+describe('Hindi script replies', () => {
+  it('understands yes, no and readings in Devanagari', () => {
+    expect(parseWithRules('हाँ, ले ली').findings).toEqual([{ kind: 'confirm', done: true }]);
+    expect(parseWithRules('अभी नहीं').findings).toEqual([{ kind: 'confirm', done: false }]);
+    expect(parseWithRules('दवा ले ली').findings).toEqual([{ kind: 'confirm', done: true, routine: 'MEDICINE' }]);
+    expect(parseWithRules('शुगर 110').findings).toEqual([{ kind: 'sugar', value: 110 }]);
+    expect(parseWithRules('5 गिलास पानी').findings).toEqual([{ kind: 'water', glasses: 5 }]);
+    expect(parseWithRules('BP १३८/८५').findings).toEqual([{ kind: 'bp', systolic: 138, diastolic: 85 }]);
+  });
+  it('reads consent and stop in Hindi', () => {
+    expect(consentAnswer('हाँ')).toBe('yes');
+    expect(consentAnswer('नहीं')).toBe('no');
+    expect(isStopRequest('बंद करो')).toBe(true);
   });
 });
 

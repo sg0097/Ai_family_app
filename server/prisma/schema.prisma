@@ -18,8 +18,51 @@ model User {
   whatsappAlerts Boolean         @default(true)
   timezone       String? // the child's own, from their browser; used to label times in alerts
   createdAt      DateTime        @default(now())
-  parents        ParentProfile[]
+  parents        ParentProfile[] // parents this user added (the owner)
+  careOf         CareMember[] // parents shared with this user
+  invitesSent    CareInvite[]
+  notes          CareNote[]
   notifications  Notification[]
+  passwordResets PasswordReset[]
+  // Bumped on password reset: sessions signed with an older version stop working.
+  tokenVersion   Int             @default(0)
+}
+
+// Siblings and other family members who share a parent's dashboard and alerts.
+// The parent's `userId` is the owner; members can do everything except remove the parent
+// or manage who else is on the team.
+model CareMember {
+  id        String        @id @default(cuid())
+  parentId  String
+  parent    ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+
+  @@unique([parentId, userId])
+}
+
+model CareInvite {
+  id          String        @id @default(cuid())
+  parentId    String
+  parent      ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  email       String
+  token       String        @unique
+  invitedById String
+  invitedBy   User          @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique // only the hash is stored; the link carries the token
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 }
 
 enum ConsentStatus {
@@ -36,10 +79,11 @@ model ParentProfile {
   name            String // how the child addresses them, e.g. "Mummy"
   relationship    String
   // WhatsApp id format: country code + number, digits only (e.g. 919812345678).
-  // Unique for now: one child per parent. Sharing between siblings needs a join table.
+  // Unique: one profile per parent; siblings share it through CareMember.
   phone           String              @unique
   timezone        String              @default("Asia/Kolkata")
   emergencyNumber String              @default("112")
+  language        Language            @default(HINGLISH) // for every WhatsApp message to them
   consentStatus   ConsentStatus       @default(PENDING)
   consentAt       DateTime?
   lastInboundAt   DateTime? // drives WhatsApp's 24h session window
@@ -50,6 +94,69 @@ model ParentProfile {
   messages        Message[]
   alerts          Alert[]
   notifications   Notification[]
+  members         CareMember[]
+  invites         CareInvite[]
+  medicines       Medicine[]
+  appointments    Appointment[]
+  notes           CareNote[]
+}
+
+enum Language {
+  HINGLISH
+  HINDI // Devanagari script
+  ENGLISH
+}
+
+// A medicine as the doctor prescribed it. Dose and instructions are stored and repeated
+// exactly as entered: the product never changes or suggests medication instructions.
+model Medicine {
+  id              String        @id @default(cuid())
+  parentId        String
+  parent          ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  name            String // "Telma 40"
+  dose            String? // "1 tablet"
+  instructions    String? // "after breakfast", as written on the prescription
+  prescribedBy    String?
+  pillsLeft       Int? // optional stock count for refill alerts
+  pillsPerDose    Int           @default(1)
+  refillAlertDays Int           @default(5)
+  refilledAt      DateTime? // one refill alert per refill
+  active          Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  routines        Routine[]
+}
+
+enum AppointmentStatus {
+  UPCOMING
+  DONE
+  CANCELLED
+}
+
+model Appointment {
+  id                String            @id @default(cuid())
+  parentId          String
+  parent            ParentProfile     @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  title             String // "Dr. Sharma (heart)"
+  place             String?
+  at                DateTime
+  notes             String?
+  remindParent      Boolean           @default(true)
+  status            AppointmentStatus @default(UPCOMING)
+  remindedDayBefore DateTime?
+  remindedSameDay   DateTime?
+  createdAt         DateTime          @default(now())
+}
+
+// Shared family notes: "Doctor said less salt", "Calls are best after 7 PM".
+model CareNote {
+  id        String        @id @default(cuid())
+  parentId  String
+  parent    ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  text      String
+  pinned    Boolean       @default(false)
+  createdAt DateTime      @default(now())
 }
 
 enum RoutineType {
@@ -81,6 +188,8 @@ model Routine {
   startDate         String? // INTERVAL anchor, "YYYY-MM-DD" in the parent's timezone
   dayOfMonth        Int? // MONTHLY
   target            Int? // e.g. glasses of water per day
+  medicineId        String?
+  medicine          Medicine?           @relation(fields: [medicineId], references: [id], onDelete: SetNull)
   // Care rules. null = off.
   followUpMinutes   Int?                @default(60) // one gentle follow-up to the parent
   alertAfterMinutes Int?                @default(180) // tell the child if still not done

@@ -1,13 +1,14 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { DateTime } from 'luxon';
 import { z } from 'zod';
-import { consentRequest, text } from '../conversation/copy.js';
+import { consentRequest, strings } from '../conversation/copy.js';
 import { askAboutParent } from '../insights/ask.js';
 import { todayView } from '../insights/index.js';
 import { weeklyReport } from '../insights/report.js';
 import { weekSchedule } from '../insights/schedule.js';
 import { trends } from '../insights/trends.js';
 import { prisma } from '../lib/db.js';
+import { accessibleBy } from '../lib/access.js';
 import { HttpError, notFound } from '../lib/http.js';
 import { normalizePhone } from '../lib/phone.js';
 import { enqueueOutbound } from '../lib/queues.js';
@@ -25,6 +26,7 @@ const routineFields = z.object({
   target: z.number().int().min(1).max(30).nullish(),
   followUpMinutes: z.number().int().min(15).max(720).nullable().optional(),
   alertAfterMinutes: z.number().int().min(30).max(1440).nullable().optional(),
+  medicineId: z.string().nullish(),
   active: z.boolean().default(true),
 });
 
@@ -44,6 +46,12 @@ const CARE_DEFAULTS: Record<string, { followUpMinutes: number | null; alertAfter
   WATER: { followUpMinutes: null, alertAfterMinutes: null },
   WELLBEING: { followUpMinutes: 120, alertAfterMinutes: null },
 };
+
+/** A reminder can only point at one of the same parent's medicines. */
+async function checkMedicine(medicineId: string | null | undefined, parentId: string) {
+  if (!medicineId) return;
+  if (!(await prisma.medicine.findFirst({ where: { id: medicineId, parentId } }))) throw new HttpError(400, 'Pick one of this parent’s medicines');
+}
 
 /** Normalise a new routine: start interval schedules today (parent's time) and drop fields other frequencies don't use. */
 function routineData(r: z.infer<typeof routineFields>, timezone: string) {
@@ -65,6 +73,7 @@ const profileBody = z.object({
   relationship: z.string().trim().min(1).max(40),
   timezone: z.string().refine((tz) => DateTime.local().setZone(tz).isValid, 'Unknown timezone'),
   emergencyNumber: z.string().trim().min(1).max(20),
+  language: z.enum(['HINGLISH', 'HINDI', 'ENGLISH']),
 });
 
 // Readings the child can add by hand, e.g. from a doctor's visit.
@@ -81,6 +90,7 @@ const parentBody = z.object({
   phone: z.string(),
   timezone: z.string().default('Asia/Kolkata'),
   emergencyNumber: z.string().trim().max(20).default('112'),
+  language: z.enum(['HINGLISH', 'HINDI', 'ENGLISH']).default('HINGLISH'),
   routines: z.array(routineFields).max(12).default([]),
 });
 
@@ -89,19 +99,19 @@ export async function parentRoutes(app: FastifyInstance) {
 
   /** 404s unless the parent belongs to the signed-in child. */
   const ownParent = async (req: FastifyRequest, id: string) => {
-    const parent = await prisma.parentProfile.findFirst({ where: { id, userId: req.user.sub }, include: { user: true } });
+    const parent = await prisma.parentProfile.findFirst({ where: { id, ...accessibleBy(req.user.sub) }, include: { user: true } });
     if (!parent) throw notFound();
     return parent;
   };
   const ownRoutine = async (req: FastifyRequest, id: string) => {
-    const routine = await prisma.routine.findFirst({ where: { id, parent: { userId: req.user.sub } } });
+    const routine = await prisma.routine.findFirst({ where: { id, parent: accessibleBy(req.user.sub) } });
     if (!routine) throw notFound();
     return routine;
   };
 
   /** Family overview: each parent with a compact view of today. */
   app.get('/parents', async (req) => {
-    const parents = await prisma.parentProfile.findMany({ where: { userId: req.user.sub }, orderBy: { createdAt: 'asc' } });
+    const parents = await prisma.parentProfile.findMany({ where: accessibleBy(req.user.sub), orderBy: { createdAt: 'asc' } });
     return Promise.all(
       parents.map(async (p) => {
         const t = await todayView(p.id);
@@ -140,7 +150,9 @@ export async function parentRoutes(app: FastifyInstance) {
         phone,
         timezone: body.timezone,
         emergencyNumber: body.emergencyNumber,
-        routines: { create: body.routines.map((r) => routineData(r, body.timezone)) },
+        language: body.language,
+        // No medicines exist yet for a brand-new parent.
+        routines: { create: body.routines.map((r) => ({ ...routineData(r, body.timezone), medicineId: null })) },
       },
       include: { user: true },
     });
@@ -167,19 +179,20 @@ export async function parentRoutes(app: FastifyInstance) {
     return prisma.parentProfile.update({
       where: { id: req.params.id },
       data: body,
-      select: { id: true, name: true, relationship: true, timezone: true, emergencyNumber: true },
+      select: { id: true, name: true, relationship: true, timezone: true, emergencyNumber: true, language: true },
     });
   });
 
   /** Remove a parent and everything recorded about them. The child must type the parent's name. */
   app.delete<{ Params: { id: string } }>('/parents/:id', async (req, reply) => {
     const parent = await ownParent(req, req.params.id);
+    if (parent.userId !== req.user.sub) throw new HttpError(403, `Only ${parent.user.name}, who added ${parent.name}, can remove them`);
     const { confirmName } = z.object({ confirmName: z.string() }).parse(req.body ?? {});
     if (confirmName.trim().toLowerCase() !== parent.name.trim().toLowerCase()) throw new HttpError(400, `Type “${parent.name}” to confirm`);
     // A polite goodbye if WhatsApp still allows a free-form message; not linked to the deleted profile.
     const windowOpen = parent.lastInboundAt && Date.now() - parent.lastInboundAt.getTime() < 23 * 60 * 60 * 1000;
     if (parent.consentStatus === 'GRANTED' && windowOpen) {
-      await enqueueOutbound({ toPhone: parent.phone, windowKnownOpen: true, session: { text: text.removed(parent.user.name) } });
+      await enqueueOutbound({ toPhone: parent.phone, windowKnownOpen: true, session: { text: strings(parent.language).removed(parent.user.name) } });
     }
     await prisma.parentProfile.delete({ where: { id: parent.id } }); // cascades to routines, records, messages, alerts
     return reply.code(204).send();
@@ -187,7 +200,7 @@ export async function parentRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>('/parents/:id/profile', async (req) => {
     const p = await ownParent(req, req.params.id);
-    return { id: p.id, name: p.name, relationship: p.relationship, phone: p.phone, timezone: p.timezone, emergencyNumber: p.emergencyNumber, consentStatus: p.consentStatus, consentAt: p.consentAt, createdAt: p.createdAt };
+    return { id: p.id, name: p.name, relationship: p.relationship, phone: p.phone, timezone: p.timezone, emergencyNumber: p.emergencyNumber, language: p.language, consentStatus: p.consentStatus, consentAt: p.consentAt, createdAt: p.createdAt, isOwner: p.userId === req.user.sub, ownerName: p.user.name };
   });
 
   app.get<{ Params: { id: string }; Querystring: { days?: string } }>('/parents/:id/trends', async (req) => {
@@ -223,7 +236,7 @@ export async function parentRoutes(app: FastifyInstance) {
 
   /** Remove a record, e.g. one the assistant misunderstood. */
   app.delete<{ Params: { id: string } }>('/events/:id', async (req, reply) => {
-    const event = await prisma.healthEvent.findFirst({ where: { id: req.params.id, parent: { userId: req.user.sub } } });
+    const event = await prisma.healthEvent.findFirst({ where: { id: req.params.id, parent: accessibleBy(req.user.sub) } });
     if (!event) throw notFound();
     await prisma.healthEvent.delete({ where: { id: event.id } });
     return reply.code(204).send();
@@ -290,12 +303,14 @@ export async function parentRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>('/parents/:id/routines', async (req, reply) => {
     const parent = await ownParent(req, req.params.id);
     const data = routineData(routineFields.parse(req.body), parent.timezone);
+    await checkMedicine(data.medicineId, parent.id);
     return reply.code(201).send(await prisma.routine.create({ data: { ...data, parentId: req.params.id } }));
   });
 
   app.patch<{ Params: { id: string } }>('/routines/:id', async (req) => {
     const current = await ownRoutine(req, req.params.id);
     const body = routineFields.partial().parse(req.body);
+    await checkMedicine(body.medicineId, current.parentId);
     const merged = { ...current, ...body };
     checkSchedule(merged);
     const scheduleChanged = ['timeOfDay', 'frequency', 'daysOfWeek', 'intervalDays', 'startDate', 'dayOfMonth'].some((k) => k in body);
@@ -320,7 +335,7 @@ export async function parentRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Params: { id: string } }>('/alerts/:id/ack', async (req) => {
-    const alert = await prisma.alert.findFirst({ where: { id: req.params.id, parent: { userId: req.user.sub } } });
+    const alert = await prisma.alert.findFirst({ where: { id: req.params.id, parent: accessibleBy(req.user.sub) } });
     if (!alert) throw notFound();
     return prisma.alert.update({ where: { id: alert.id }, data: { acknowledgedAt: new Date() } });
   });

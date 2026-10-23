@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
+import { accessibleBy } from '../lib/access.js';
 import { notFound } from '../lib/http.js';
 import { tick } from '../routines/scheduler.js';
 import { receiveInbound } from '../whatsapp/inbound.js';
@@ -15,7 +16,7 @@ export async function devRoutes(app: FastifyInstance) {
 
   app.post('/dev/inbound', async (req) => {
     const body = inboundBody.parse(req.body);
-    const parent = await prisma.parentProfile.findFirst({ where: { id: body.parentId, userId: req.user.sub } });
+    const parent = await prisma.parentProfile.findFirst({ where: { id: body.parentId, ...accessibleBy(req.user.sub) } });
     if (!parent) throw notFound();
     const status = await receiveInbound({
       waMessageId: `fake-in-${randomUUID()}`,

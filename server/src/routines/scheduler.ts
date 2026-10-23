@@ -1,4 +1,4 @@
-import type { ParentProfile, Routine } from '@prisma/client';
+import type { Medicine, ParentProfile, Routine } from '@prisma/client';
 import { DateTime } from 'luxon';
 import { prisma } from '../lib/db.js';
 import { enqueueOutbound } from '../lib/queues.js';
@@ -42,7 +42,7 @@ export async function tick(now: DateTime = DateTime.utc()) {
       parent: { consentStatus: 'GRANTED' },
       routine: { active: true },
     },
-    include: { routine: true, parent: true },
+    include: { routine: { include: { medicine: true } }, parent: true },
   });
   for (const occ of due) await sendReminder(occ.id, occ.parent, occ.routine, now.toJSDate());
   const care = await runCareRules(now);
@@ -65,7 +65,7 @@ async function materialize(routine: Routine, local: DateTime, now: DateTime) {
 }
 
 /** Claim the occurrence (SCHEDULED → SENT) so overlapping ticks can't double-send, then queue the message. */
-export async function sendReminder(occurrenceId: string, parent: ParentProfile, routine: Routine, at: Date = new Date()) {
+export async function sendReminder(occurrenceId: string, parent: ParentProfile, routine: Routine & { medicine?: Medicine | null }, at: Date = new Date()) {
   const claimed = await prisma.routineOccurrence.updateMany({
     where: { id: occurrenceId, status: 'SCHEDULED' },
     data: { status: 'SENT', sentAt: at, followUpAt: null, childAlertedAt: null },
@@ -76,7 +76,7 @@ export async function sendReminder(occurrenceId: string, parent: ParentProfile, 
 
 /** One-tap nudge: (re)open today's occurrence for a routine and send its reminder immediately. */
 export async function sendNow(routineId: string) {
-  const routine = await prisma.routine.findUniqueOrThrow({ where: { id: routineId }, include: { parent: true } });
+  const routine = await prisma.routine.findUniqueOrThrow({ where: { id: routineId }, include: { parent: true, medicine: true } });
   const localDate = DateTime.utc().setZone(routine.parent.timezone).toISODate()!;
   const existing = await prisma.routineOccurrence.findUnique({ where: { routineId_localDate: { routineId, localDate } } });
   if (existing?.status === 'DONE') throw new HttpError(409, 'Already done today');

@@ -11,6 +11,8 @@ export interface SessionMessage {
 /** A pre-approved template, required outside the 24h session window. */
 export interface TemplateMessage {
   name: string;
+  /** WhatsApp template language code; defaults to META_TEMPLATE_LANGUAGE. */
+  language?: string;
   params: string[];
   buttonPayloads?: string[]; // quick-reply payloads, in template button order
 }

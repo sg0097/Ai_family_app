@@ -10,16 +10,19 @@ const YES = [
   'haan', 'haa', 'ha', 'han', 'haanji', 'hanji', 'haan ji', 'ji haan', 'ji', 'yes', 'yeah', 'yep', 'ok', 'okay', 'done',
   'le li', 'le liya', 'le lia', 'kha li', 'khaa li', 'kha liya', 'kar li', 'kar liya', 'ho gaya', 'ho gayi', 'ho gai',
   'ho gya', 'ho gyi', 'hogaya', 'hogayi',
+  // Devanagari
+  'हाँ', 'हां', 'हा', 'जी', 'जी हाँ', 'हाँ जी', 'ले ली', 'ले लिया', 'खा ली', 'कर ली', 'कर लिया', 'हो गया', 'हो गई', 'हो गयी',
 ];
 const NO = [
   'nahi', 'nahin', 'nhi', 'nai', 'no', 'nope', 'abhi nahi', 'bhool', 'bhool gayi', 'bhool gaya', 'bhul gayi', 'bhul gaya',
+  'नहीं', 'नही', 'अभी नहीं', 'भूल गई', 'भूल गया',
 ];
 const YES_EMOJI = ['✅', '👍', '👌'];
 const NO_EMOJI = ['❌', '👎'];
 
 const ROUTINE_WORDS: [RoutineType, string[]][] = [
-  ['MEDICINE', ['dawa', 'dawai', 'dava', 'davai', 'goli', 'tablet', 'medicine', 'dose', 'insulin']],
-  ['WALK', ['walk', 'sair', 'ghoom', 'ghoomne', 'tehal', 'tahal', 'tahalne', 'exercise', 'yoga']],
+  ['MEDICINE', ['dawa', 'dawai', 'dava', 'davai', 'goli', 'tablet', 'medicine', 'dose', 'insulin', 'दवा', 'दवाई', 'गोली']],
+  ['WALK', ['walk', 'sair', 'ghoom', 'ghoomne', 'tehal', 'tahal', 'tahalne', 'exercise', 'yoga', 'सैर', 'टहलना', 'वॉक']],
 ];
 
 const NOTES: [string, string[]][] = [
@@ -62,9 +65,9 @@ const BODY_PARTS: [string, string[]][] = [
 const LOCAL_SYMPTOMS = new Set(['pain', 'swelling', 'burning']);
 
 const WELLBEING: ['good' | 'okay' | 'low', string[]][] = [
-  ['low', ['achha nahi', 'accha nahi', 'acha nahi', 'theek nahi', 'thik nahi', 'kharab', 'udaas', 'low', 'bura', 'not good', 'not well']],
-  ['good', ['achha', 'accha', 'acha', 'badhiya', 'badiya', 'mast', 'good', 'great', 'khush', 'fit']],
-  ['okay', ['theek', 'thik', 'thek', 'okay', 'ok', 'normal', 'fine']],
+  ['low', ['achha nahi', 'accha nahi', 'acha nahi', 'theek nahi', 'thik nahi', 'kharab', 'udaas', 'low', 'bura', 'not good', 'not well', 'अच्छा नहीं', 'ठीक नहीं', 'खराब', 'उदास']],
+  ['good', ['achha', 'accha', 'acha', 'badhiya', 'badiya', 'mast', 'good', 'great', 'khush', 'fit', 'अच्छा', 'बढ़िया', 'बढ़िया', 'खुश']],
+  ['okay', ['theek', 'thik', 'thek', 'okay', 'ok', 'normal', 'fine', 'ठीक']],
 ];
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -75,6 +78,7 @@ const firstMatch = <T>(text: string, table: [T, string[]][]) => table.find(([, w
 export function normalize(text: string): string {
   return text
     .toLowerCase()
+    .replace(/[०-९]/g, (d) => String('०१२३४५६७८९'.indexOf(d))) // Devanagari digits → 0-9
     .replace(/[^\p{L}\p{M}\p{N}\s/.\\-]/gu, ' ') // drop punctuation and emoji; keep letters with their vowel signs (\p{M}, needed for Devanagari), "/" for 138/85 and "." for 62.5
     .replace(/(\D)\.|\.(\D|$)/g, '$1 $2')
     .replace(/\s+/g, ' ')
@@ -92,16 +96,16 @@ export function parseWithRules(raw: string, pending: RoutineType[] = []): Unders
   if (bp) findings.push({ kind: 'bp', systolic: Number(bp[1]), diastolic: Number(bp[2]) });
 
   const sugar =
-    text.match(/(?:sugar|shugar|sugr|glucose)\D{0,15}?(\d{2,3})(?!\d)/) ?? text.match(/(\d{2,3})\s*(?:mg\/?dl\s*)?(?:sugar|shugar|glucose)/);
+    text.match(/(?:sugar|shugar|sugr|glucose|शुगर)\D{0,15}?(\d{2,3})(?!\d)/) ?? text.match(/(\d{2,3})\s*(?:mg\/?dl\s*)?(?:sugar|shugar|glucose|शुगर)/);
   if (sugar) {
     const context = hasAny(text, ['fasting', 'khali pet', 'khaali pet']) ? 'fasting' : hasAny(text, ['khane ke baad', 'after food', 'pp']) ? 'after meal' : undefined;
     findings.push({ kind: 'sugar', value: Number(sugar[1]), ...(context && { context }) });
   }
 
-  const water = text.match(/(\d{1,2})\s*(?:glass|glasses|gilas|gilaas|glas|gilass)(?!\w)/) ?? text.match(/(?:paani|pani|water)\D{0,10}?(\d{1,2})(?!\d)/);
+  const water = text.match(/(\d{1,2})\s*(?:glass|glasses|gilas|gilaas|glas|gilass|गिलास)(?![\w\u0900-\u097F])/) ?? text.match(/(?:paani|pani|water|पानी)\D{0,10}?(\d{1,2})(?!\d)/);
   if (water) findings.push({ kind: 'water', glasses: Number(water[1]) });
 
-  const weight = text.match(/(\d{2,3}(?:\.\d)?)\s*(?:kg|kgs|kilo)(?!\w)/) ?? text.match(/(?:weight|wajan|vajan)\D{0,10}?(\d{2,3}(?:\.\d)?)(?![\d.])/);
+  const weight = text.match(/(\d{2,3}(?:\.\d)?)\s*(?:kg|kgs|kilo|किलो)(?![\w\u0900-\u097F])/) ?? text.match(/(?:weight|wajan|vajan|वज़न|वजन)\D{0,10}?(\d{2,3}(?:\.\d)?)(?![\d.])/);
   if (weight) findings.push({ kind: 'weight', kg: Number(weight[1]) });
 
   // A bare number answers whichever reading we asked for.
@@ -127,7 +131,7 @@ export function parseWithRules(raw: string, pending: RoutineType[] = []): Unders
 
   // Yes / no
   const yes = hasAny(text, YES) || YES_EMOJI.some((e) => raw.includes(e));
-  const no = hasAny(text, NO) || tokens[0] === 'na' || NO_EMOJI.some((e) => raw.includes(e));
+  const no = hasAny(text, NO) || tokens[0] === 'na' || tokens[0] === 'ना' || NO_EMOJI.some((e) => raw.includes(e));
   if (!wellbeing && (yes || no)) {
     if (yes && no) {
       confident = false; // "haan, nahi bhooli" — let the model work it out
@@ -164,12 +168,12 @@ export function isEmergencyRequest(raw: string): boolean {
 }
 
 export function isStopRequest(raw: string): boolean {
-  return ['stop', 'band karo', 'unsubscribe'].includes(normalize(raw));
+  return ['stop', 'band karo', 'unsubscribe', 'बंद करो', 'बंद'].includes(normalize(raw));
 }
 
 export function consentAnswer(raw: string): 'yes' | 'no' | null {
   const text = normalize(raw);
-  if (hasAny(text, ['nahi', 'nahin', 'no', 'nhi', 'stop'])) return 'no';
-  if (hasAny(text, ['haan', 'han', 'ha', 'haanji', 'hanji', 'ji', 'yes', 'ok', 'okay', 'start', 'theek hai'])) return 'yes';
+  if (hasAny(text, ['nahi', 'nahin', 'no', 'nhi', 'stop', 'नहीं', 'नही'])) return 'no';
+  if (hasAny(text, ['haan', 'han', 'ha', 'haanji', 'hanji', 'ji', 'yes', 'ok', 'okay', 'start', 'theek hai', 'हाँ', 'हां', 'जी', 'शुरू', 'ठीक है'])) return 'yes';
   return null;
 }

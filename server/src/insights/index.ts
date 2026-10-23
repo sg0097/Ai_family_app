@@ -1,6 +1,7 @@
 import type { HealthEvent, OccurrenceStatus, RoutineType } from '@prisma/client';
 import { DateTime } from 'luxon';
 import { prisma } from '../lib/db.js';
+import { daysLeft } from '../care/refill.js';
 import { describeSchedule, expectedGapDays, isDueOn, nextDueDate } from '../routines/schedule.js';
 
 // Deterministic insights from the database. Wording stays neutral: missing data is reported as
@@ -59,6 +60,11 @@ export async function todayView(parentId: string) {
     if (e) lastByType.set(type, e);
   }
   const lastWeight = await prisma.healthEvent.findFirst({ where: { parentId, type: 'WEIGHT' }, orderBy: { occurredAt: 'desc' } });
+  const [appointments, medicines, pinnedNotes] = await Promise.all([
+    prisma.appointment.findMany({ where: { parentId, status: 'UPCOMING', at: { gte: now.startOf('day').toJSDate(), lte: now.plus({ days: 7 }).endOf('day').toJSDate() } }, orderBy: { at: 'asc' } }),
+    prisma.medicine.findMany({ where: { parentId, active: true, pillsLeft: { not: null } }, include: { routines: true } }),
+    prisma.careNote.findMany({ where: { parentId, pinned: true }, orderBy: { createdAt: 'desc' }, take: 3, include: { author: { select: { name: true } } } }),
+  ]);
   const localDay = (d: Date) => DateTime.fromJSDate(d).setZone(zone).toISODate()!;
   const daysSince = (d: Date) => Math.floor(now.startOf('day').diff(DateTime.fromJSDate(d).setZone(zone).startOf('day'), 'days').days);
 
@@ -112,6 +118,10 @@ export async function todayView(parentId: string) {
       attention.push({ kind: 'stale', text: `No ${label(r.type)} reading yet` });
     }
   }
+  for (const m of medicines) {
+    const left = daysLeft(m, m.routines);
+    if (left != null && left <= m.refillAlertDays) attention.push({ kind: 'refill', text: left === 0 ? `${m.name} has run out` : `${m.name}: about ${left} day${left === 1 ? '' : 's'} of tablets left` });
+  }
   for (const s of symptomCounts(recentEvents, localDay)) {
     if (s.count >= 2) attention.push({ kind: 'symptom', text: `${parent.name} mentioned ${s.name} ${s.count} times this week` });
   }
@@ -127,6 +137,8 @@ export async function todayView(parentId: string) {
     symptoms: recentEvents.filter((e) => e.type === 'SYMPTOM').map((e) => ({ name: e.valueText, since: e.context, at: e.occurredAt })),
     alerts,
     urgent: urgent.map((u) => ({ text: u.title, at: u.createdAt })),
+    appointments: appointments.map((a) => ({ id: a.id, title: a.title, place: a.place, at: a.at })),
+    pinnedNotes: pinnedNotes.map((n) => ({ id: n.id, text: n.text, author: n.author?.name ?? null })),
     // The most recent of each reading, whenever it was, shown as sent (never judged).
     latestReadings: {
       bp: lastByType.get('BP') ? { value: fmtEvent(lastByType.get('BP')!), at: lastByType.get('BP')!.occurredAt } : null,

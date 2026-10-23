@@ -7,7 +7,8 @@ import { DateTime } from 'luxon';
 import { notifyChild } from '../care/notify.js';
 import { redFlags } from '../care/redflags.js';
 import { canonicalSymptom, isGenericSymptom } from './symptoms.js';
-import { payload, text } from './copy.js';
+import { careTeam, teamNames } from '../lib/access.js';
+import { payload, strings } from './copy.js';
 import type { Finding } from './findings.js';
 import { llmEnabled, understandWithLlm } from './llm.js';
 import { consentAnswer, isEmergencyRequest, isStopRequest, parseWithRules } from './rules.js';
@@ -23,7 +24,9 @@ export async function processInbound(messageId: string) {
   const msg = await prisma.message.findUnique({ where: { id: messageId }, include: { parent: { include: { user: true } } } });
   if (!msg?.parent || msg.direction !== 'IN' || msg.handledBy) return; // unknown sender, or already handled on a retry
   const parent = msg.parent;
-  const childName = parent.user.name;
+  const t = strings(parent.language);
+  // Who the parent is told will see their replies: "Priya" or "Priya aur Rahul".
+  const childName = teamNames(await careTeam(parent.id), { HINGLISH: 'aur', HINDI: 'और', ENGLISH: 'and' }[parent.language]);
   const outbox: OutboundJob[] = [];
   const reply = (session: SessionMessage) => outbox.push({ parentId: parent.id, toPhone: parent.phone, session });
 
@@ -43,7 +46,7 @@ export async function processInbound(messageId: string) {
       body: `Please call them now: +${parent.phone}`,
       dedupeKey: `help:${alert.id}`,
     });
-    reply({ text: text.emergency(childName, parent.emergencyNumber) });
+    reply({ text: t.emergency(childName, parent.emergencyNumber) });
     return flush(outbox);
   }
 
@@ -56,9 +59,9 @@ export async function processInbound(messageId: string) {
       if (answer === 'no' && parent.consentStatus !== 'GRANTED') await tx.parentProfile.update({ where: { id: parent.id }, data: { consentStatus: 'DECLINED' } });
       await markHandled(tx, consentTap ? 'BUTTON' : 'RULES');
     });
-    if (answer === 'yes' && parent.consentStatus !== 'GRANTED') reply({ text: text.welcome(childName) });
-    else if (answer === 'no' && parent.consentStatus !== 'GRANTED') reply({ text: text.declined });
-    else if (parent.consentStatus === 'PENDING') reply({ text: text.askConsentAgain });
+    if (answer === 'yes' && parent.consentStatus !== 'GRANTED') reply({ text: t.welcome(childName) });
+    else if (answer === 'no' && parent.consentStatus !== 'GRANTED') reply({ text: t.declined });
+    else if (parent.consentStatus === 'PENDING') reply({ text: t.askConsentAgain });
     return flush(outbox);
   }
 
@@ -68,7 +71,7 @@ export async function processInbound(messageId: string) {
       await tx.routineOccurrence.updateMany({ where: { parentId: parent.id, status: { in: ['SCHEDULED', 'SENT'] } }, data: { status: 'NO_RESPONSE' } });
       await markHandled(tx, 'RULES');
     });
-    reply({ text: text.stopped });
+    reply({ text: t.stopped });
     return flush(outbox);
   }
 
@@ -124,6 +127,7 @@ export async function processInbound(messageId: string) {
     const r = await applyFindings(tx, {
       parentId: parent.id,
       childName,
+      t,
       messageId: msg.id,
       at: msg.createdAt,
       source,
@@ -178,11 +182,11 @@ export async function processInbound(messageId: string) {
   }
 
   // A serious mention gets one clear reply instead of the usual "noted" for symptoms.
-  const acks = flags.length ? result.acks.filter((a) => !a.startsWith(text.symptomAck(''))) : result.acks;
-  const safety = flags.length ? [text.redFlag(childName, parent.emergencyNumber)] : [];
-  if (result.clarify) reply({ text: [...acks, ...safety, text.clarify].join(' '), buttons: result.clarify });
+  const acks = flags.length ? result.acks.filter((a) => !a.startsWith(t.symptomAck(''))) : result.acks;
+  const safety = flags.length ? [t.redFlag(childName, parent.emergencyNumber)] : [];
+  if (result.clarify) reply({ text: [...acks, ...safety, t.clarify].join(' '), buttons: result.clarify });
   else if (acks.length || safety.length) reply({ text: [...new Set(acks), ...safety].join(' ') });
-  else reply({ text: modelRan ? '❤️' : text.notUnderstood });
+  else reply({ text: modelRan ? '❤️' : t.notUnderstood });
   return flush(outbox);
 }
 
@@ -193,6 +197,7 @@ async function flush(outbox: OutboundJob[]) {
 interface ApplyContext {
   parentId: string;
   childName: string;
+  t: ReturnType<typeof strings>;
   messageId: string;
   at: Date;
   source: EventSource;
@@ -224,6 +229,13 @@ async function applyFindings(tx: Tx, ctx: ApplyContext): Promise<{ acks: string[
       data: { status: done ? 'DONE' : 'NOT_DONE', respondedAt: ctx.at, note: note ?? null },
     });
     if (done && occ.childAlertedAt) resolved.push(occ);
+    // A confirmed dose uses up tablets from the stock, if the family is tracking it.
+    if (done && occ.status !== 'DONE' && occ.routine.medicineId) {
+      const med = await tx.medicine.findUnique({ where: { id: occ.routine.medicineId } });
+      if (med?.pillsLeft != null) {
+        await tx.medicine.update({ where: { id: med.id }, data: { pillsLeft: Math.max(0, med.pillsLeft - med.pillsPerDose) } });
+      }
+    }
     return occ;
   };
   const event = (type: EventType, data: Partial<Prisma.HealthEventUncheckedCreateInput>, occurrenceId?: string) =>
@@ -236,35 +248,35 @@ async function applyFindings(tx: Tx, ctx: ApplyContext): Promise<{ acks: string[
       case 'bp': {
         const occ = await resolve('BP', true);
         await event('BP', { valueNum: f.systolic, valueNum2: f.diastolic, unit: 'mmHg' }, occ?.id);
-        acks.push(`BP ${f.systolic}/${f.diastolic} note kar liya ❤️`);
+        acks.push(ctx.t.ackBp(f.systolic, f.diastolic));
         break;
       }
       case 'sugar': {
         const occ = await resolve('SUGAR', true);
         await event('SUGAR', { valueNum: f.value, unit: 'mg/dL', context: f.context }, occ?.id);
-        acks.push(`Sugar ${f.value} note kar li ❤️`);
+        acks.push(ctx.t.ackSugar(f.value));
         break;
       }
       case 'water': {
         const occ = await resolve('WATER', true);
         await event('WATER', { valueNum: f.glasses, unit: 'glasses' }, occ?.id);
         const target = occ?.routine.target;
-        acks.push(target && f.glasses >= target ? `${f.glasses} glass, shabash! 🌟` : `${f.glasses} glass paani 👍`);
+        acks.push(target && f.glasses >= target ? ctx.t.ackWaterGoal(f.glasses) : ctx.t.ackWater(f.glasses));
         break;
       }
       case 'weight':
         await event('WEIGHT', { valueNum: f.kg, unit: 'kg' });
-        acks.push(`Weight ${f.kg} kg note kar liya ❤️`);
+        acks.push(ctx.t.ackWeight(f.kg));
         break;
       case 'wellbeing': {
         const occ = await resolve('WELLBEING', true);
         await event('WELLBEING', { valueText: f.level }, occ?.id);
-        acks.push(f.level === 'good' ? 'Sunke achha laga 😊' : `Dhyan rakhiye ❤️ ${ctx.childName} ko bhi dikh jayega.`);
+        acks.push(f.level === 'good' ? ctx.t.ackFeelGood : ctx.t.ackFeelOther(ctx.childName));
         break;
       }
       case 'symptom':
         await event('SYMPTOM', { valueText: f.name, context: f.since });
-        acks.push(text.symptomAck(ctx.childName));
+        acks.push(ctx.t.symptomAck(ctx.childName));
         break;
       case 'confirm': {
         const candidates = unused().filter((p) => !f.routine || p.routine.type === f.routine);
@@ -281,8 +293,8 @@ async function applyFindings(tx: Tx, ctx: ApplyContext): Promise<{ acks: string[
         if (type === 'MEDICINE' || type === 'WALK') {
           await event(type, { valueText: f.done ? 'done' : 'not done', context: f.note }, occ?.id);
         }
-        if (type) acks.push(f.done ? 'Shabash! ❤️' : 'Koi baat nahi, jab ho jaye tab bata dijiye ❤️');
-        else acks.push(text.noted);
+        if (type) acks.push(f.done ? ctx.t.ackDone : ctx.t.ackNotYet);
+        else acks.push(ctx.t.noted);
         break;
       }
     }

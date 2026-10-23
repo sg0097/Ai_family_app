@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon';
-import { followUp } from '../conversation/copy.js';
+import { appointmentReminder, followUp } from '../conversation/copy.js';
+import { daysLeft } from './refill.js';
 import { prisma } from '../lib/db.js';
 import { enqueueOutbound } from '../lib/queues.js';
 import { weeklyReport } from '../insights/report.js';
@@ -25,7 +26,7 @@ export async function runCareRules(now: DateTime = DateTime.utc()) {
       routine: { active: true },
       parent: { consentStatus: 'GRANTED' },
     },
-    include: { routine: true, parent: true },
+    include: { routine: { include: { medicine: true } }, parent: true },
   });
 
   let followUps = 0;
@@ -76,7 +77,9 @@ export async function runCareRules(now: DateTime = DateTime.utc()) {
 
   alerts += await silenceAlerts(now);
   const reports = await weeklyReportReady(now);
-  return { followUps, alerts, reports };
+  const refills = await refillAlerts(now);
+  const appointments = await appointmentReminders(now);
+  return { followUps, alerts, reports, refills, appointments };
 }
 
 /** Reminders are going out but nothing has come back for a day. One alert per quiet spell. */
@@ -118,6 +121,71 @@ async function weeklyReportReady(now: DateTime): Promise<number> {
     if (await prisma.notification.findUnique({ where: { dedupeKey: key } })) continue;
     const report = await weeklyReport(p.id, weekStart);
     if (await notifyChild({ parentId: p.id, kind: 'REPORT', title: `${p.name}’s weekly report is ready`, body: report.summary, dedupeKey: key })) n++;
+  }
+  return n;
+}
+
+const DAYTIME = (hour: number) => hour >= 9 && hour < 21;
+
+/** Tablets running low: one alert to the family per refill cycle, during the day. */
+export async function refillAlerts(now: DateTime): Promise<number> {
+  const meds = await prisma.medicine.findMany({
+    where: { active: true, pillsLeft: { not: null }, parent: { consentStatus: 'GRANTED' } },
+    include: { routines: true, parent: true },
+  });
+  let n = 0;
+  for (const m of meds) {
+    if (!DAYTIME(now.setZone(m.parent.timezone).hour)) continue;
+    const days = daysLeft(m, m.routines);
+    if (days == null || days > m.refillAlertDays) continue;
+    const created = await notifyChild({
+      parentId: m.parentId,
+      kind: 'REFILL',
+      title: days === 0 ? `${m.parent.name}’s ${m.name} has run out` : `${m.parent.name}’s ${m.name}: about ${days} day${days === 1 ? '' : 's'} left`,
+      body: `${m.pillsLeft} left at ${m.pillsPerDose} per dose. Mark it refilled on the Care page once more is bought.`,
+      dedupeKey: `refill:${m.id}:${(m.refilledAt ?? m.createdAt).toISOString()}`,
+    });
+    if (created) n++;
+  }
+  return n;
+}
+
+const APPT_EVENING_HOUR = 19; // the evening before, parent's time
+const APPT_SAME_DAY_HOURS = 3; // and this long before, on the day
+
+/** Doctor appointments: remind the parent the evening before and on the day; tell the family the evening before. */
+export async function appointmentReminders(now: DateTime): Promise<number> {
+  const upcoming = await prisma.appointment.findMany({
+    where: { status: 'UPCOMING', at: { gt: now.toJSDate(), lt: now.plus({ days: 2 }).toJSDate() }, parent: { consentStatus: 'GRANTED' } },
+    include: { parent: true },
+  });
+  let n = 0;
+  for (const a of upcoming) {
+    const local = now.setZone(a.parent.timezone);
+    const at = DateTime.fromJSDate(a.at).setZone(a.parent.timezone);
+    const tomorrow = at.hasSame(local.plus({ days: 1 }), 'day');
+
+    if (tomorrow && local.hour >= APPT_EVENING_HOUR && !a.remindedDayBefore) {
+      const claimed = await prisma.appointment.updateMany({ where: { id: a.id, remindedDayBefore: null }, data: { remindedDayBefore: now.toJSDate() } });
+      if (claimed.count !== 1) continue;
+      if (a.remindParent) await enqueueOutbound({ parentId: a.parentId, toPhone: a.parent.phone, ...appointmentReminder(a.parent, a, 'tomorrow') });
+      await notifyChild({
+        parentId: a.parentId,
+        kind: 'APPOINTMENT',
+        title: `Tomorrow: ${a.parent.name} has ${a.title}`,
+        body: `At ${at.toFormat('h:mm a')}${a.place ? `, ${a.place}` : ''}.${a.remindParent ? ` ${a.parent.name} has been reminded on WhatsApp.` : ''}`,
+        dedupeKey: `appt:${a.id}:tomorrow`,
+      });
+      n++;
+    }
+
+    const soon = at.hasSame(local, 'day') && at.diff(local, 'hours').hours <= APPT_SAME_DAY_HOURS && local.hour >= 7;
+    if (soon && a.remindParent && !a.remindedSameDay) {
+      const claimed = await prisma.appointment.updateMany({ where: { id: a.id, remindedSameDay: null }, data: { remindedSameDay: now.toJSDate() } });
+      if (claimed.count !== 1) continue;
+      await enqueueOutbound({ parentId: a.parentId, toPhone: a.parent.phone, ...appointmentReminder(a.parent, a, 'today') });
+      n++;
+    }
   }
   return n;
 }
