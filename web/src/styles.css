@@ -1419,3 +1419,47 @@ h1 em, h2 em, .big-title em { background: none; color: var(--soft-ink); font-sty
 .st-foot { max-width: 1240px; margin: 0 auto; padding: 30px 20px 40px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 0.9rem; border-top: 1px solid var(--line); }
 .st-word { text-align: center; font-size: clamp(5rem, 20vw, 16rem); font-weight: 700; letter-spacing: -0.07em; line-height: 0.8; color: #f2f2f1; user-select: none; overflow: hidden; padding-bottom: 10px; }
 @media (prefers-reduced-motion: reduce) { .st-rotor > span, .wave-bars i { animation: none; } }
+.need-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 900px) { .need-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .need-grid { grid-template-columns: 1fr; } }
+.need { background: var(--panel); border-radius: 30px; padding: 30px; display: flex; flex-direction: column; min-height: 250px; color: var(--ink); text-decoration: none; transition: transform 0.25s var(--ease); }
+.need:hover { transform: translateY(-3px); }
+.need.dark { background: #111; color: #fff; }
+.need-num { font-size: clamp(3.4rem, 6vw, 4.8rem); font-weight: 700; letter-spacing: -0.06em; line-height: 0.95; }
+.need p { margin: auto 0 0; padding-top: 22px; font-size: 1.05rem; line-height: 1.45; color: var(--ink-2); max-width: 26ch; }
+.need.dark p { color: #cfcfcf; }
+.need-src { margin-top: 14px; font-family: var(--font-mono); font-size: 0.74rem; color: var(--muted); }
+.need.dark .need-src { color: #9a9a9a; }
+
+/* ── Today: greeting + reminder tiles ── */
+.today { gap: 22px; }
+.greet { display: flex; gap: 20px; align-items: center; justify-content: space-between; padding: 6px 2px 4px; flex-wrap: wrap; }
+.greet h1 { font-size: clamp(1.7rem, 3.4vw, 2.4rem); font-weight: 650; letter-spacing: -0.04em; }
+.greet-detail { color: var(--muted); margin: 6px 0 0; font-size: 0.95rem; }
+.greet-needs { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.greet-needs li { display: inline-flex; align-items: center; gap: 8px; padding: 7px 13px; border-radius: 999px; background: var(--panel); font-size: 0.84rem; font-weight: 500; }
+.greet.help .greet-needs li { background: #fdecea; }
+.greet.help .dot.a { background: var(--critical); }
+.tiles-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.tiles-head h2 { font-size: 1.15rem; font-weight: 600; }
+.tiles-head .soft { color: var(--soft-ink); font-weight: 500; margin-left: 6px; }
+.rtiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.rtile { position: relative; background: var(--panel); border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-height: 172px; transition: transform 0.2s var(--ease), background 0.2s; }
+.rtile:hover { transform: translateY(-2px); }
+.rtile.done { background: #fff; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.rtile.waiting, .rtile.not_done { background: #fff; box-shadow: inset 0 0 0 1.5px var(--ink); }
+.rtile-main { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 3px; flex: 1; border-radius: 12px; }
+.rtile-main:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+.rtile-main .ichip { font-size: 40px; margin: 0 0 12px; transform: rotate(-4deg); }
+.rtile-main b { font-size: 0.98rem; font-weight: 600; letter-spacing: -0.01em; }
+.rtile-state { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+.rtile-state .pill { font-size: 0.74rem; }
+.rtile-done { position: absolute; top: 14px; right: 14px; width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; animation: pop 0.35s var(--ease) both; }
+.dash-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+@media (max-width: 980px) { .dash-cols { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) { .dash-cols { grid-template-columns: 1fr; } .rtiles { grid-template-columns: 1fr 1fr; } .rtile { min-height: 150px; } }
+.app .card h2 { font-size: 0.98rem; }
+.rtiles { grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); }
+.rtile { min-height: 150px; padding: 15px; }
+.rtile-main .ichip { font-size: 36px; margin-bottom: 10px; }
+.rec-dot { background: var(--ink); color: #fff; }

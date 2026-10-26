@@ -150,6 +150,16 @@ function WayChat({ way }: { way: keyof typeof WAYS }) {
   );
 }
 
+// Every number links to where it comes from. Keep it that way when adding more.
+const NEED = [
+  { pre: '', value: 149, post: 'M', line: 'Indians are 60 or older. By 2050 it will be 347 million.', source: 'UNFPA, India Ageing Report 2023', url: 'https://india.unfpa.org/en/news/india-ageing-elderly-make-20-population-2050-unfpa-report' },
+  { pre: '', value: 2046, post: '', line: 'The year India’s elderly are expected to outnumber its children.', source: 'UNFPA, India Ageing Report 2023', url: 'https://india.unfpa.org/en/news/india-ageing-elderly-make-20-population-2050-unfpa-report', plain: true },
+  { pre: '1 in ', value: 5, post: '', line: 'older Indians live alone or only with their spouse. Children moving away is the top reason.', source: 'BKPAI survey, PLoS ONE 2021', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8046240', dark: true },
+  { pre: '', value: 45, post: '%', line: 'of Indians over 50 have high blood pressure, which needs daily medicine and regular checks.', source: 'LASI Wave 1 (2017–18)', url: 'https://doaj.org/article/5d32e56549094e4aa58056b016e71460' },
+  { pre: '1 in ', value: 2, post: '', line: 'people on long-term treatment don’t take their medicines as prescribed.', source: 'WHO, Adherence to Long-Term Therapies', url: 'https://www.who.int/publications/i/item/9241545992' },
+  { pre: '', value: 500, post: 'M+', line: 'Indians already use WhatsApp. Your parents probably do too.', source: 'Meta, 2024', url: 'https://www.storyboard18.com/how-it-works/meta-doubles-down-on-whatsapp-business-in-india-23713.htm' },
+];
+
 const FAQ = [
   ['Does Maa need to install anything?', 'No. If she can reply on WhatsApp, she’s set. There is no app for her.'],
   ['What if she doesn’t reply?', 'She gets one gentle reminder later. If it’s still not done, we tell you. No reply is shown as “no reply”, never as a missed dose.'],
@@ -202,6 +212,23 @@ export function Landing() {
           <LiveChat />
         </div>
       </div>
+
+      <section className="section" id="why">
+        <div className="st-center">
+          <span className="st-eyebrow">Why this matters</span>
+          <h2 className="st-h2">Parents are <Chip icon="heart" tone="pink" /> ageing. <span className="st-grey">Children are far away.</span></h2>
+          <p className="st-lede">Someone has to remember the 9 AM tablet. These are the numbers behind every “dawai li?” call.</p>
+        </div>
+        <div className="need-grid">
+          {NEED.map((n) => (
+            <a key={n.line} className={`need${n.dark ? ' dark' : ''}`} href={n.url} target="_blank" rel="noreferrer">
+              <div className="need-num">{n.pre}{n.plain ? n.value : <CountUp value={n.value} />}{n.post}</div>
+              <p>{n.line}</p>
+              <span className="need-src">{n.source} ↗</span>
+            </a>
+          ))}
+        </div>
+      </section>
 
       <section className="section">
         <div className="st-split">
@@ -269,23 +296,23 @@ export function Landing() {
               <span><i className="dot r" /> HELP</span>
             </div>
           </div>
-          <div className="bx">
-            <div className="huge"><CountUp value={149} />M</div>
-            <div className="grow" />
-            <h3>Indians are 60+</h3>
-            <p>UNFPA, India Ageing Report 2023</p>
-          </div>
-          <div className="bx">
-            <div className="huge">1 in <CountUp value={2} /></div>
-            <div className="grow" />
-            <h3>skip long-term medicines</h3>
-            <p>Most people don’t take them as prescribed. WHO</p>
-          </div>
           <div className="bx w2">
             <div className="icon-sq"><Icon name="message" size={24} /></div>
             <div className="grow" />
             <h3>Brothers and sisters, together.</h3>
             <p>Everyone sees the same day and gets the same alerts.</p>
+          </div>
+          <div className="bx">
+            <div className="icon-sq"><Icon name="smile" size={24} /></div>
+            <div className="grow" />
+            <h3>Say hi</h3>
+            <p>A check-in she answers with one tap.</p>
+          </div>
+          <div className="bx">
+            <div className="icon-sq"><Icon name="memory" size={24} /></div>
+            <div className="grow" />
+            <h3>Spots patterns</h3>
+            <p>Knee pain three days running? You’ll know.</p>
           </div>
           <div className="bx bx-wide-row">
             <div className="icon-sq"><Icon name="info" size={22} /></div>

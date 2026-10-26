@@ -7,7 +7,7 @@ export const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 /** Things that rise into view as you scroll. Matches by class, so pages need no extra markup. */
-const REVEAL = '.card, .glance-tile, .parent-card, .step, .feature, .status-card, .appt, .med, .rem, .team-list li, .day-line li, .fact, .plan-card, .memories > li, .ftile, .bx, .st-plan, .faq-item';
+const REVEAL = '.card, .glance-tile, .parent-card, .step, .feature, .status-card, .appt, .med, .rem, .team-list li, .day-line li, .fact, .plan-card, .memories > li, .ftile, .bx, .st-plan, .faq-item, .need, .rtile';
 
 /**
  * Cards fade and rise into view the first time they're seen, siblings slightly staggered.

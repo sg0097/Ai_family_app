@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { Num } from '../../components/Num';
 import { Link } from 'react-router-dom';
 import { api } from '../../api';
 import { CheckInDialog, RecentCheckIns } from '../../components/CheckIn';
 import { Ask } from '../../components/Ask';
-import { Icon, RoutineIcon } from '../../components/Icon';
+import { Icon, RoutineIcon, type IconName } from '../../components/Icon';
 import { ReminderDialog, blankReminder, missingSuggestions } from '../../components/ReminderDialog';
 import { describeFrequency } from '../../components/RoutineForm';
-import { Modal, Ring, Skeleton, Toast } from '../../components/ui';
+import { Modal, Skeleton, Toast } from '../../components/ui';
 import { fmtAgo, fmtClock, fmtDate, fmtTime } from '../../format';
 import { useApi, useToast } from '../../hooks';
 import { dayStatus } from '../../status';
@@ -39,37 +38,50 @@ export function TodayPage() {
   };
 
   return (
-    <div className="dash">
+    <div className="dash today">
       <StatusCard status={status} phone={p.phone} name={p.name} alertId={today.alerts[0]?.id} onAck={reload} onCheckIn={consented ? () => setCheckIn(true) : undefined} />
 
-      <div className="dash-grid">
-        {!hasReminders ? (
-          <SetupReminders name={p.name} onPick={(start) => setDialog({ start })} />
-        ) : (
-          <section className="card">
-            <div className="spread" style={{ marginBottom: 4 }}>
-              <div className="row" style={{ gap: 12 }}>
-                {list.length > 0 && <Ring value={done} total={list.length} size={44} stroke={5}><b style={{ fontSize: '0.78rem' }}><Num value={done} />/{list.length}</b></Ring>}
-                <div>
-                  <h2>Today’s reminders</h2>
-                  <p className="tiny" style={{ marginTop: 2 }}>{list.length ? `${done} of ${list.length} done${consented ? '' : ' · paused until they say yes'}` : 'Nothing planned today'}</p>
-                </div>
-              </div>
-              <button className="btn ghost sm" onClick={() => setDialog({ start: blankReminder('MEDICINE') })}><Icon name="plus" size={14} /> Add</button>
+      {!hasReminders ? (
+        <SetupReminders name={p.name} onPick={(start) => setDialog({ start })} />
+      ) : (
+        <section>
+          <div className="tiles-head">
+            <h2>Today <span className="soft">{list.length ? `${done} of ${list.length} done${consented ? '' : ' · paused until they say yes'}` : 'nothing planned'}</span></h2>
+            <div className="row" style={{ gap: 6 }}>
+              <Link to="reminders" className="btn ghost sm">All reminders</Link>
+              <button className="btn sm" onClick={() => setDialog({ start: blankReminder('MEDICINE') })}><Icon name="plus" size={14} /> Add</button>
             </div>
-            <ul className="checklist">
-              {list.map((r) => <CheckRow key={r.id} r={r} name={p.name} canRemind={consented} onEdit={() => openEdit(r.id)} />)}
-            </ul>
-            <div className="spread wrap" style={{ marginTop: 8, gap: 8 }}>
-              <span className="tiny">
-                {later.length > 0 && `Not today: ${later.map((r) => `${r.name}${r.nextDue ? ` (next ${fmtDate(r.nextDue, { weekday: 'short', day: 'numeric', month: 'short' })})` : ''}`).join(' · ')}`}
-              </span>
-              <Link to="reminders" className="link-btn small">All reminders →</Link>
-            </div>
-          </section>
-        )}
+          </div>
+          <div className="rtiles">
+            {list.map((r) => <ReminderTile key={r.id} r={r} name={p.name} canRemind={consented} onEdit={() => openEdit(r.id)} />)}
+          </div>
+          {later.length > 0 && (
+            <p className="tiny" style={{ marginTop: 10 }}>
+              Not today: {later.map((r) => `${r.name}${r.nextDue ? ` (next ${fmtDate(r.nextDue, { weekday: 'short', day: 'numeric', month: 'short' })})` : ''}`).join(' · ')}
+            </p>
+          )}
+        </section>
+      )}
 
+      <div className="dash-cols">
         <div className="dash-side">
+          <FromParent extra={<RecentCheckIns parentId={id} parentName={p.name} version={sentCheckIns} />} />
+          {(goodToKnow.length > 0 || today.pinnedNotes.length > 0) && (
+            <section className="card">
+              <h2 style={{ marginBottom: 8 }}>Good to know</h2>
+              {goodToKnow.length > 0 && <ul className="plain-list">{goodToKnow.map((a, i) => <li key={i}>{a.text}</li>)}</ul>}
+              {today.pinnedNotes.length > 0 && (
+                <ul className="notes" style={{ marginTop: goodToKnow.length ? 10 : 0 }}>
+                  {today.pinnedNotes.map((n) => (
+                    <li key={n.id} className="pinned"><p>{n.text}</p><span className="tiny">{n.author ?? 'Family'} · pinned note</span></li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+        </div>
+        <div className="dash-side">
+          {hasReminders && <LatestReadings today={today} />}
           {today.appointments.length > 0 && (
             <section className="card">
               <div className="spread" style={{ marginBottom: 8 }}>
@@ -89,26 +101,10 @@ export function TodayPage() {
               </ul>
             </section>
           )}
-          {hasReminders && <LatestReadings today={today} />}
+        </div>
+        <div className="dash-side">
           {hasReminders && <WeekSoFar />}
         </div>
-      </div>
-
-      <div className="dash-row">
-        <FromParent extra={<RecentCheckIns parentId={id} parentName={p.name} version={sentCheckIns} />} />
-        {(goodToKnow.length > 0 || today.pinnedNotes.length > 0) && (
-          <section className="card">
-            <h2 style={{ marginBottom: 8 }}>Good to know</h2>
-            {goodToKnow.length > 0 && <ul className="plain-list">{goodToKnow.map((a, i) => <li key={i}>{a.text}</li>)}</ul>}
-            {today.pinnedNotes.length > 0 && (
-              <ul className="notes" style={{ marginTop: goodToKnow.length ? 10 : 0 }}>
-                {today.pinnedNotes.map((n) => (
-                  <li key={n.id} className="pinned"><p>{n.text}</p><span className="tiny">{n.author ?? 'Family'} · pinned note</span></li>
-                ))}
-              </ul>
-            )}
-          </section>
-        )}
       </div>
 
       {consented && <Ask parentId={id} name={p.name} />}
@@ -125,22 +121,22 @@ export function TodayPage() {
   );
 }
 
+/** The plain-words answer to "how is she today?", with the two things you might do about it. */
 function StatusCard({ status, phone, name, alertId, onAck, onCheckIn }: { status: ReturnType<typeof dayStatus>; phone: string; name: string; alertId?: string; onAck: () => void; onCheckIn?: () => void }) {
   const urgent = status.tone === 'help' || status.tone === 'needs';
   return (
-    <section className={`status-card ${status.tone}`} aria-live="polite">
-      <div className="status-icon" aria-hidden><Icon name={status.icon} size={20} /></div>
-      <div style={{ flex: 1, minWidth: 0 }}>
+    <section className={`greet ${status.tone}`} aria-live="polite">
+      <div style={{ minWidth: 0 }}>
         <h1>{status.title}</h1>
-        <p className="status-detail">{status.detail}</p>
-        {status.needs.length > 0 && <ul className="need-list">{status.needs.map((n) => <li key={n}>{n}</li>)}</ul>}
+        <p className="greet-detail">{status.detail}</p>
+        {status.needs.length > 0 && <ul className="greet-needs">{status.needs.map((n) => <li key={n}><i className="dot a" /> {n}</li>)}</ul>}
       </div>
       <div className="status-actions">
         {status.tone === 'help' && alertId && (
           <button className="btn ghost" onClick={() => api(`/alerts/${alertId}/ack`, { method: 'POST' }).then(onAck)}>I’ve called</button>
         )}
-        {onCheckIn && status.tone !== 'help' && <button className="btn ghost" onClick={onCheckIn}><Icon name="message" size={15} /> Check in</button>}
-        <a className={`btn${urgent ? '' : ' ghost'}`} href={`tel:+${phone}`}><Icon name="phone" size={15} /> Call {name}</a>
+        {onCheckIn && status.tone !== 'help' && <button className="btn ghost" onClick={onCheckIn}><Icon name="message" size={15} /> Say hi</button>}
+        <a className={`btn${urgent || !onCheckIn ? '' : ' ghost'}`} href={`tel:+${phone}`}><Icon name="phone" size={15} /> Call {name}</a>
       </div>
     </section>
   );
@@ -165,7 +161,16 @@ function SetupReminders({ name, onPick }: { name: string; onPick: (start: Routin
   );
 }
 
-function CheckRow({ r, name, canRemind, onEdit }: { r: Row; name: string; canRemind: boolean; onEdit: () => void }) {
+const TILE: Record<Row['type'], { icon: IconName; tone: string }> = {
+  MEDICINE: { icon: 'pill', tone: 'pink' },
+  BP: { icon: 'heart', tone: 'violet' },
+  SUGAR: { icon: 'drop', tone: 'amber' },
+  WATER: { icon: 'glass', tone: 'blue' },
+  WALK: { icon: 'walk', tone: 'green' },
+  WELLBEING: { icon: 'smile', tone: 'black' },
+};
+
+function ReminderTile({ r, name, canRemind, onEdit }: { r: Row; name: string; canRemind: boolean; onEdit: () => void }) {
   const { reload, today } = useParent();
   const tz = today.parent.timezone;
   const [confirm, setConfirm] = useState(false);
@@ -176,7 +181,7 @@ function CheckRow({ r, name, canRemind, onEdit }: { r: Row; name: string; canRem
   let state: { text: string; cls: string };
   switch (r.status) {
     case 'done':
-      state = { text: `Done${r.respondedAt ? ` · ${fmtClock(r.respondedAt, tz)}` : ''}`, cls: 'good' };
+      state = { text: r.latest && (r.type === 'BP' || r.type === 'SUGAR' || r.type === 'WATER') ? r.latest : `Done${r.respondedAt ? ` · ${fmtClock(r.respondedAt, tz)}` : ''}`, cls: 'good' };
       break;
     case 'waiting':
       state = { text: r.followUpAt ? 'No reply yet · reminded twice' : 'Waiting for reply', cls: 'coral' };
@@ -203,23 +208,22 @@ function CheckRow({ r, name, canRemind, onEdit }: { r: Row; name: string; canRem
     }
   }
 
+  const look = TILE[r.type];
   return (
-    <li className={`check ${r.status}`}>
-      <span className="check-mark" aria-hidden>
-        {r.status === 'done' ? <Icon name="check" size={16} stroke={2.2} /> : <RoutineIcon type={r.type} size={30} />}
-      </span>
-      <button className="check-body as-button" onClick={onEdit} aria-label={`Change ${r.name}`}>
-        <div className="check-title">{cap(r.name)}</div>
-        <div className="tiny">
+    <div className={`rtile ${r.status}`}>
+      {r.status === 'done' && <span className="rtile-done" aria-hidden><Icon name="check" size={13} stroke={2.6} /></span>}
+      <button className="rtile-main" onClick={onEdit} aria-label={`Change ${r.name}`}>
+        <span className={`ichip c-${look.tone}`} aria-hidden><Icon name={look.icon} stroke={2.4} /></span>
+        <b>{cap(r.name)}</b>
+        <span className="tiny">
           {fmtTime(r.timeOfDay)}
           {r.schedule !== 'Every day' ? ` · ${r.schedule}` : ''}
-          {r.status === 'done' && r.latest && (r.type === 'BP' || r.type === 'SUGAR' || r.type === 'WATER') ? ` · ${r.latest}` : ''}
           {r.note ? ` · ${r.note}` : ''}
-        </div>
+        </span>
       </button>
-      <div className="check-state">
+      <div className="rtile-state">
         <span className={`pill ${state.cls}`}>{state.text}</span>
-        {remindable && <button className="link-btn small quiet-link" onClick={() => setConfirm(true)}>Remind now</button>}
+        {remindable && <button className="link-btn small" onClick={() => setConfirm(true)}>Remind now</button>}
       </div>
       {confirm && (
         <Modal title={`Remind ${name} now?`} onClose={() => setConfirm(false)}>
@@ -227,12 +231,12 @@ function CheckRow({ r, name, canRemind, onEdit }: { r: Row; name: string; canRem
           {err && <p className="error" style={{ marginBottom: 12 }}>{err}</p>}
           <div className="row" style={{ justifyContent: 'flex-end' }}>
             <button className="btn quiet" onClick={() => setConfirm(false)}>Cancel</button>
-            <button className="btn coral" onClick={remind}>Send reminder</button>
+            <button className="btn" onClick={remind}>Send reminder</button>
           </div>
         </Modal>
       )}
       <Toast message={toast} />
-    </li>
+    </div>
   );
 }
 
