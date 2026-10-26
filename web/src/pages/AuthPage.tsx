@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Icon, type IconName } from '../components/Icon';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useSession } from '../App';
@@ -34,10 +35,18 @@ export function AuthPage({ mode }: { mode: 'signup' | 'login' }) {
     <div className="auth">
       <div className="auth-art">
         <Logo />
-        <blockquote>
-          Know how their day is going by <em>lunchtime</em>, not on the Sunday call.
-        </blockquote>
-        <p className="ink-2 small">Parents chat on WhatsApp. You see the picture.</p>
+        <div className="auth-art-body">
+          <h2>Know how Maa’s day is going, <em>by lunchtime.</em></h2>
+          <div className="auth-tiles" aria-hidden>
+            {[['pill', 'pink', 'Medicine', 'Done ✓'], ['heart', 'violet', 'BP', '128/82'], ['smile', 'orange', 'Feeling', 'Good'], ['glass', 'blue', 'Water', '6 of 8']].map(([icon, tone, label, value], i) => (
+              <div key={label} className="auth-tile" style={{ '--i': i } as React.CSSProperties}>
+                <span className={`ichip c-${tone}`}><Icon name={icon as IconName} stroke={2.4} /></span>
+                <b>{label}</b><span>{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <p className="auth-foot">Parents chat on WhatsApp. You see the picture.</p>
       </div>
       <div className="auth-form">
         <form onSubmit={submit} className="reveal">

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ChartCard, ColumnChart, Heatmap, LineChart } from '../charts';
 import { Icon, RoutineIcon, type IconName } from '../Icon';
 import { Num } from '../Num';
@@ -25,26 +26,26 @@ export function Kpis({ parentId, today }: { parentId: string; today: Today }) {
   const pct = med && med.closed ? Math.round((med.done / med.closed) * 100) : null;
   const prevPct = prev && prev.closed ? Math.round((prev.done / prev.closed) * 100) : null;
   const bp = today.latestReadings.bp;
-  const cards: { icon: IconName; tone: string; label: string; value: React.ReactNode; foot: React.ReactNode; bar?: number }[] = [
-    { icon: 'check', tone: 'green', label: 'Today', value: <><Num value={done} /><small>/{list.length}</small></>, foot: list.length - done > 0 ? `${list.length - done} still to come or waiting` : 'All done for today', bar: list.length ? done / list.length : 0 },
+  const cards: { icon: IconName; tone: string; label: string; value: React.ReactNode; foot: React.ReactNode; bar?: number; to: string }[] = [
+    { icon: 'check', tone: 'green', label: 'Today', value: <><Num value={done} /><small>/{list.length}</small></>, foot: list.length - done > 0 ? `${list.length - done} still to come or waiting` : 'All done for today', bar: list.length ? done / list.length : 0, to: '#today-tiles' },
     {
       icon: 'pill', tone: 'pink', label: 'Medicine this week',
       value: pct == null ? '—' : <><Num value={pct} /><small>%</small></>,
       foot: pct == null ? 'No medicine replies yet' : prevPct == null ? `${med!.done} of ${med!.closed} confirmed` : <Delta now={pct} before={prevPct} unit=" pts" />,
-      bar: pct == null ? undefined : pct / 100,
+      bar: pct == null ? undefined : pct / 100, to: 'care',
     },
-    { icon: 'heart', tone: 'violet', label: 'Latest BP', value: bp ? bp.value : '—', foot: bp ? `${t?.stats.bpReadings ?? 0} readings this week` : 'Not sent yet' },
-    { icon: 'message', tone: 'blue', label: 'Heard from her', value: t ? <><Num value={t.stats.daysHeardFrom} /><small>/7 days</small></> : '—', foot: t && t.stats.streak > 1 ? `${t.stats.streak}-day reply streak` : 'Days she replied this week', bar: t ? t.stats.daysHeardFrom / 7 : undefined },
+    { icon: 'heart', tone: 'violet', label: 'Latest BP', value: bp ? bp.value : '—', foot: bp ? `${t?.stats.bpReadings ?? 0} readings this week` : 'Not sent yet', to: 'history' },
+    { icon: 'message', tone: 'blue', label: 'Heard from her', value: t ? <><Num value={t.stats.daysHeardFrom} /><small>/7 days</small></> : '—', foot: t && t.stats.streak > 1 ? `${t.stats.streak}-day reply streak` : 'Days she replied this week', bar: t ? t.stats.daysHeardFrom / 7 : undefined, to: 'history?view=messages' },
   ];
   return (
     <div className="kpis">
       {cards.map((c) => (
-        <div key={c.label} className={`kpi t-${c.tone}`}>
+        <Link key={c.label} to={c.to.startsWith('#') ? '' : c.to} onClick={c.to.startsWith('#') ? (e) => { e.preventDefault(); document.querySelector(c.to)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } : undefined} className={`kpi t-${c.tone}`}>
           <div className="kpi-top"><span className={`ichip c-${c.tone}`} aria-hidden><Icon name={c.icon} stroke={2.4} /></span><span>{c.label}</span></div>
           <div className="kpi-val">{c.value}</div>
           {c.bar != null && <div className="kpi-bar" aria-hidden><span style={{ width: `${Math.round(c.bar * 100)}%` }} /></div>}
-          <div className="kpi-foot">{c.foot}</div>
-        </div>
+          <div className="kpi-foot">{c.foot}<Icon name="arrow" size={14} /></div>
+        </Link>
       ))}
     </div>
   );

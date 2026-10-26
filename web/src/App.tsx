@@ -4,6 +4,7 @@ import { api, getToken, setToken } from './api';
 import { NotificationBell } from './components/NotificationBell';
 import { Avatar, Logo, Modal } from './components/ui';
 import { browserTimeZone } from './format';
+import { Icon } from './components/Icon';
 import { useScrollReveal } from './motion';
 import { ForgotPage, InvitePage, ResetPage } from './pages/AccountPages';
 import { AuthPage } from './pages/AuthPage';
@@ -95,53 +96,109 @@ export function App() {
   );
 }
 
+/** The sections of a parent's pages, each with its own colour, as listed in the sidebar and tab bar. */
+export const SECTIONS = [
+  { path: '', label: 'Today', icon: 'home', tone: 'green' },
+  { path: 'reminders', label: 'Reminders', icon: 'bell', tone: 'amber' },
+  { path: 'care', label: 'Care', icon: 'pill', tone: 'pink' },
+  { path: 'report', label: 'Weekly report', icon: 'chart', tone: 'violet' },
+  { path: 'history', label: 'History', icon: 'calendar', tone: 'blue' },
+  { path: 'settings', label: 'Settings', icon: 'gear', tone: 'slate' },
+] as const;
+
 function AppShell({ children }: { children: React.ReactNode }) {
   const { user, family, signOut } = useSession();
   const [open, setOpen] = useState(false);
+  const [drawer, setDrawer] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const loc = useLocation();
-  useEffect(() => setOpen(false), [loc.pathname]);
+  useEffect(() => { setOpen(false); setDrawer(false); }, [loc.pathname]);
+  const activeParent = loc.pathname.match(/^\/app\/p\/([^/]+)/)?.[1];
+  const plan = user?.plan;
 
   return (
-    <div className="app">
-      <div className="nav-wrap" style={{ paddingTop: 0 }}>
-        <nav className="nav">
+    <div className={`app shell${drawer ? ' drawer-open' : ''}`}>
+      <aside className="side" aria-label="Main">
+        <div className="side-top">
           <Logo to="/app" />
-          <div className="family-switch">
-            {family?.map((p) => (
-              <NavLink key={p.id} to={`/app/p/${p.id}`} className={({ isActive }) => (isActive ? 'on' : '')}>
-                <Avatar name={p.name} size={26} />
-                {p.name}
-                {p.alerts > 0 && <span className="pill critical" style={{ padding: '1px 7px' }}>!</span>}
+          <button className="side-close" onClick={() => setDrawer(false)} aria-label="Close menu"><Icon name="x" size={16} /></button>
+        </div>
+
+        <NavLink to="/app" end className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}>
+          <span className="side-ic t-violet"><Icon name="home" size={16} /></span>Family home
+        </NavLink>
+
+        <div className="side-label">Parents</div>
+        {family?.map((p) => {
+          const on = activeParent === p.id;
+          const pct = p.today.total ? p.today.done / p.today.total : 0;
+          return (
+            <div key={p.id} className={`side-parent${on ? ' on' : ''}`}>
+              <NavLink to={`/app/p/${p.id}`} className="side-parent-link">
+                <span className="side-av" style={{ '--p': pct } as React.CSSProperties}><Avatar name={p.name} size={30} /></span>
+                <span className="side-parent-name">
+                  <b>{p.name}</b>
+                  <small>{p.consentStatus !== 'GRANTED' ? 'Waiting for yes' : p.today.total ? `${p.today.done} of ${p.today.total} done today` : 'Nothing today'}</small>
+                </span>
+                {p.alerts > 0 ? <span className="side-alert" title="Needs you">!</span> : p.attention > 0 ? <span className="side-dot" title="Something to check" /> : null}
               </NavLink>
-            ))}
-          </div>
-          <div className="row" style={{ marginLeft: 'auto', gap: 6 }}>
-            <Link to="/app/new" className="btn ghost sm">+ Add parent</Link>
-            <NotificationBell />
-            <div className="menu">
-              <button className="btn quiet sm" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(!open)}>
-                <Avatar name={user?.name ?? '?'} size={28} />
-              </button>
-              {open && (
-                <div className="menu-pop" role="menu">
-                  <div style={{ padding: '8px 12px 10px' }}>
-                    <div style={{ fontWeight: 600 }}>{user?.name}</div>
-                    <div className="tiny">{user?.email}</div>
-                  </div>
-                  <Link to="/app" role="menuitem" onClick={() => setOpen(false)}>Family</Link>
-                  <Link to="/app/plan" role="menuitem" onClick={() => setOpen(false)}>
-                    Plan · {user?.plan.plan === 'FAMILY' ? 'Family' : user?.plan.trialDaysLeft ? `trial, ${user.plan.trialDaysLeft} days left` : 'Free'}
-                  </Link>
-                  <button role="menuitem" onClick={signOut}>Sign out</button>
-                  <button role="menuitem" style={{ color: 'var(--critical)' }} onClick={() => { setOpen(false); setDeleting(true); }}>Delete my account…</button>
-                </div>
+              {on && (
+                <nav className="side-sub" aria-label={`${p.name}’s pages`}>
+                  {SECTIONS.map((s) => (
+                    <NavLink key={s.path} to={s.path ? `/app/p/${p.id}/${s.path}` : `/app/p/${p.id}`} end={s.path === ''} className={({ isActive }) => `side-link sub${isActive ? ' active' : ''}`}>
+                      <span className={`side-ic t-${s.tone}`}><Icon name={s.icon} size={15} /></span>{s.label}
+                    </NavLink>
+                  ))}
+                </nav>
               )}
             </div>
+          );
+        })}
+        <Link to="/app/new" className="side-add"><Icon name="plus" size={15} /> Add a parent</Link>
+
+        <div className="side-bottom">
+          {plan && (
+            <Link to="/app/plan" className={`side-plan${plan.plan === 'FAMILY' ? ' paid' : ''}`}>
+              <b>{plan.plan === 'FAMILY' ? 'Family plan' : plan.trialDaysLeft ? `Family trial · ${plan.trialDaysLeft} days left` : 'Free plan'}</b>
+              <span>{plan.plan === 'FAMILY' ? 'Voice notes, 4 parents, siblings' : 'Your voice in reminders, siblings, 4 parents'}</span>
+              <em>{plan.plan === 'FAMILY' ? 'Manage' : 'See plans'} →</em>
+            </Link>
+          )}
+          <div className="menu side-user">
+            <button className="side-user-btn" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(!open)}>
+              <Avatar name={user?.name ?? '?'} size={32} />
+              <span><b>{user?.name}</b><small>{user?.email}</small></span>
+              <Icon name="right" size={14} />
+            </button>
+            {open && (
+              <div className="menu-pop up" role="menu">
+                <Link to="/app/plan" role="menuitem">Plan</Link>
+                <button role="menuitem" onClick={signOut}>Sign out</button>
+                <button role="menuitem" style={{ color: 'var(--critical)' }} onClick={() => { setOpen(false); setDeleting(true); }}>Delete my account…</button>
+              </div>
+            )}
           </div>
-        </nav>
+        </div>
+      </aside>
+      <div className="side-scrim" onClick={() => setDrawer(false)} aria-hidden />
+
+      <div className="main-col">
+        <header className="topbar">
+          <button className="topbar-menu" onClick={() => setDrawer(true)} aria-label="Open menu"><Icon name="menu" size={20} /></button>
+          <span className="topbar-logo"><Logo to="/app" tagline={false} /></span>
+          <div className="topbar-title">
+            <Link to="/app">Family</Link>
+            {activeParent && family?.find((p) => p.id === activeParent) && <><Icon name="right" size={13} /><b>{family.find((p) => p.id === activeParent)!.name}</b></>}
+            {loc.pathname === '/app/plan' && <><Icon name="right" size={13} /><b>Plans</b></>}
+            {loc.pathname === '/app/new' && <><Icon name="right" size={13} /><b>Add a parent</b></>}
+          </div>
+          <div className="row" style={{ marginLeft: 'auto', gap: 8 }}>
+            <Link to="/app/new" className="btn ghost sm topbar-add"><Icon name="plus" size={14} /> Add parent</Link>
+            <NotificationBell />
+          </div>
+        </header>
+        <main className="app-main">{children}</main>
       </div>
-      <main className="app-main">{children}</main>
       {deleting && <DeleteAccount onClose={() => setDeleting(false)} />}
     </div>
   );

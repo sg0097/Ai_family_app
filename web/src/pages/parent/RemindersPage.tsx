@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { api } from '../../api';
 import { Icon, RoutineIcon } from '../../components/Icon';
+import { DayTimeline } from '../../components/today/DayTimeline';
+import { LOOK, type DayItem } from '../../components/today/model';
 import { ReminderDialog, blankReminder, missingSuggestions } from '../../components/ReminderDialog';
 import { describeFrequency } from '../../components/RoutineForm';
 import { Skeleton, Switch, Toast } from '../../components/ui';
@@ -23,6 +25,7 @@ export function RemindersPage() {
   const { data, reload } = useApi<Routine[]>(`/parents/${id}/routines`);
   const { toast, show } = useToast();
   const [dialog, setDialog] = useState<{ routine?: Routine; start?: RoutineInput } | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
 
   const refresh = () => {
     reload();
@@ -40,54 +43,89 @@ export function RemindersPage() {
 
   if (!data) return <div className="simple"><Skeleton h={420} /></div>;
   const sorted = [...data].sort((a, b) => Number(b.active) - Number(a.active) || a.timeOfDay.localeCompare(b.timeOfDay));
-  const daily = sorted.filter((r) => r.frequency === 'DAILY');
-  const other = sorted.filter((r) => r.frequency !== 'DAILY');
   const suggestions = missingSuggestions(data);
 
-  const list = (rows: Routine[]) => (
-    <ul className="rem-list">
-      {rows.map((r) => (
-        <li key={r.id} className={`rem${r.active ? '' : ' paused'}`}>
-          <button className="rem-main" onClick={() => setDialog({ routine: r })} aria-label={`Change ${r.name}`}>
-            <span className="rem-time num">{fmtTime(r.timeOfDay)}</span>
-            <RoutineIcon type={r.type} size={38} />
-            <span className="rem-body">
-              <span className="rem-name">{r.name.charAt(0).toUpperCase() + r.name.slice(1)}</span>
-              <span className="tiny">
-                {ROUTINE_LABEL[r.type]} · {describeFrequency(r)}{r.target ? ` · goal ${r.target} glasses` : ''}
-              </span>
-              <span className="tiny rem-care"><Icon name="bell" size={12} /> {careSummary(r, name)}</span>
+  const PARTS = [
+    { key: 'morning', label: 'Morning', hint: 'before noon', icon: 'sun' as const, tone: 'amber', test: (h: number) => h < 12 },
+    { key: 'afternoon', label: 'Afternoon', hint: '12 – 5 PM', icon: 'sun' as const, tone: 'blue', test: (h: number) => h >= 12 && h < 17 },
+    { key: 'evening', label: 'Evening & night', hint: 'after 5 PM', icon: 'moon' as const, tone: 'violet', test: (h: number) => h >= 17 },
+  ];
+  const hour = (r: Routine) => Number(r.timeOfDay.slice(0, 2));
+  const counts = (Object.keys(LOOK) as Routine['type'][]).map((t) => ({ t, n: data.filter((r) => r.active && r.type === t).length })).filter((c) => c.n);
+  const planned: DayItem[] = sorted.filter((r) => r.active).map((r) => ({
+    routineId: r.id, name: r.name, type: r.type, time: r.timeOfDay, status: 'planned', sentAt: null, followUpAt: null, respondedAt: null, childAlertedAt: null, note: null, latest: null,
+  }));
+
+  const row = (r: Routine, n: number) => {
+    const look = LOOK[r.type];
+    return (
+      <li key={r.id} className={`rem2 t-${look.tone}${r.active ? '' : ' paused'}${hovered === r.id ? ' hot' : ''}`} style={{ '--n': n } as React.CSSProperties}
+        onMouseEnter={() => setHovered(r.id)} onMouseLeave={() => setHovered(null)}>
+        <button className="rem2-main" onClick={() => setDialog({ routine: r })} aria-label={`Change ${r.name}`}>
+          <span className={`ichip c-${look.tone}`} aria-hidden><Icon name={look.icon} stroke={2.4} /></span>
+          <span className="rem2-time">{fmtTime(r.timeOfDay)}</span>
+          <span className="rem2-body">
+            <b>{r.name.charAt(0).toUpperCase() + r.name.slice(1)}</b>
+            <span className="rem2-chips">
+              <span>{describeFrequency(r)}</span>
+              {r.target ? <span>Goal {r.target} glasses</span> : null}
+              <span><Icon name="bell" size={11} /> {careSummary(r, name)}</span>
+              {r.voiceClipId && <span className="voice"><Icon name="mic" size={11} /> Your voice</span>}
             </span>
-            <span className="rem-edit tiny">{r.active ? 'Change' : 'Paused'} <Icon name="right" size={14} /></span>
-          </button>
-          <Switch on={r.active} label={`${r.active ? 'Pause' : 'Turn on'} ${r.name}`} onChange={(v) => toggle(r, v)} />
-        </li>
-      ))}
-    </ul>
-  );
+          </span>
+          <span className="rem2-edit">{r.active ? 'Change' : 'Paused'} <Icon name="right" size={14} /></span>
+        </button>
+        <Switch on={r.active} label={`${r.active ? 'Pause' : 'Turn on'} ${r.name}`} onChange={(v) => toggle(r, v)} />
+      </li>
+    );
+  };
 
   return (
-    <div className="simple">
-      <section className="card">
-        <div className="spread wrap" style={{ marginBottom: 6 }}>
+    <div className="dash">
+      <section className="card rem-hero">
+        <div className="spread wrap" style={{ gap: 12 }}>
           <div>
             <h2>Reminders for {name}</h2>
-            <p className="muted small" style={{ marginTop: 4 }}>
-              {data.filter((r) => r.active).length} on · sent on WhatsApp at {name}’s time. Tap one to change it.
-            </p>
+            <p className="muted small" style={{ marginTop: 4 }}>{data.filter((r) => r.active).length} on · sent on WhatsApp at {name}’s time. Tap one to change it.</p>
           </div>
           <button className="btn" onClick={() => setDialog({ start: blankReminder('MEDICINE') })}><Icon name="plus" size={16} /> Add reminder</button>
         </div>
-
-        {data.length === 0 ? (
-          <div className="empty">No reminders yet. Start with one of the suggestions below.</div>
-        ) : (
-          <>
-            {daily.length > 0 && <><h3 className="rem-group">Every day</h3>{list(daily)}</>}
-            {other.length > 0 && <><h3 className="rem-group">On some days</h3>{list(other)}</>}
-          </>
+        {counts.length > 0 && (
+          <div className="rem-counts">
+            {counts.map((c) => (
+              <span key={c.t} className={`rem-count t-${LOOK[c.t].tone}`}>
+                <span className={`ichip c-${LOOK[c.t].tone}`} aria-hidden><Icon name={LOOK[c.t].icon} stroke={2.4} /></span>
+                <b>{c.n}</b> {ROUTINE_LABEL[c.t].toLowerCase()}
+              </span>
+            ))}
+          </div>
+        )}
+        {planned.length > 0 && (
+          <DayTimeline items={planned} isToday timeZone={today.parent.timezone} hovered={hovered} onHover={setHovered}
+            onOpen={(i) => { const r = data.find((x) => x.id === i.routineId); if (r) setDialog({ routine: r }); }} />
         )}
       </section>
+
+      {data.length === 0 ? (
+        <div className="card empty">No reminders yet. Start with one of the suggestions below.</div>
+      ) : (
+        <div className="rem-parts">
+          {PARTS.map((part) => {
+            const rows = sorted.filter((r) => part.test(hour(r)));
+            if (!rows.length) return null;
+            return (
+              <section key={part.key} className={`card rem-part t-${part.tone}`}>
+                <div className="rem-part-head">
+                  <span className="rem-part-ic"><Icon name={part.icon} size={18} /></span>
+                  <h3>{part.label}</h3>
+                  <span className="tiny">{part.hint} · {rows.length}</span>
+                </div>
+                <ul className="rem2-list">{rows.map(row)}</ul>
+              </section>
+            );
+          })}
+        </div>
+      )}
 
       {suggestions.length > 0 && (
         <section className="card">

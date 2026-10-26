@@ -40,7 +40,7 @@ function DoctorReportCard() {
   return (
     <section className="card report-cta">
       <div>
-        <h2>Going to the doctor?</h2>
+        <h2><span className="h-ic t-violet"><Icon name="report" size={15} /></span>Going to the doctor?</h2>
         <p className="muted small" style={{ marginTop: 4 }}>
           One page with {today.parent.name}’s medicines, readings, what they said about how they felt, and your notes. Print it or save as PDF.
         </p>
@@ -66,7 +66,7 @@ function Medicines({ notify }: { notify: (m: string) => void }) {
     <section className="card">
       <div className="spread wrap" style={{ marginBottom: 6 }}>
         <div>
-          <h2>Medicines</h2>
+          <h2><span className="h-ic t-pink"><Icon name="pill" size={15} /></span>Medicines</h2>
           <p className="muted small" style={{ marginTop: 4 }}>Written exactly as on the prescription. We never change or suggest doses.</p>
         </div>
         <button className="btn ghost sm" onClick={() => setEditing('new')}><Icon name="plus" size={15} /> Add medicine</button>
@@ -282,7 +282,7 @@ function Appointments({ notify }: { notify: (m: string) => void }) {
     <section className="card">
       <div className="spread wrap" style={{ marginBottom: 6 }}>
         <div>
-          <h2>Doctor visits</h2>
+          <h2><span className="h-ic t-blue"><Icon name="calendar" size={15} /></span>Doctor visits</h2>
           <p className="muted small" style={{ marginTop: 4 }}>{today.parent.name} is reminded on WhatsApp the evening before and on the day.</p>
         </div>
         <button className="btn ghost sm" onClick={() => setEditing('new')}><Icon name="plus" size={15} /> Add visit</button>
@@ -394,7 +394,7 @@ function Notes({ notify }: { notify: (m: string) => void }) {
 
   return (
     <section className="card">
-      <h2 style={{ marginBottom: 4 }}>Family notes</h2>
+      <h2 style={{ marginBottom: 4 }}><span className="h-ic t-amber"><Icon name="message" size={15} /></span>Family notes</h2>
       <p className="muted small" style={{ marginBottom: 14 }}>Things everyone caring for {today.parent.name} should know. Pinned notes show on Today and in the doctor report.</p>
       <form className="note-form" onSubmit={add}>
         <input className="input" aria-label="New note" placeholder="e.g. Doctor said less salt" value={text} onChange={(e) => setText(e.target.value)} />

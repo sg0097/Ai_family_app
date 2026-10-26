@@ -182,7 +182,7 @@ export function VoiceLibrary({ parentId, parentName, notify }: { parentId: strin
     <section className="card">
       <div className="card-head" style={{ marginBottom: 10 }}>
         <div>
-          <h2>Your voice</h2>
+          <h2><span className="h-ic t-violet"><Icon name="mic" size={15} /></span>Your voice</h2>
           <p className="tiny" style={{ marginTop: 2 }}>A reminder in your own voice is the one {parentName} won’t ignore. Add one to any reminder, or send it with a check-in.</p>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { api } from '../api';
 import { fmtDate } from '../format';
 import { useApi } from '../hooks';
+import { Icon } from './Icon';
 import type { Memory } from '../types';
 
 const KIND: Record<Memory['kind'], string> = { HEALTH: 'Health', HABIT: 'Habit', PREFERENCE: 'Preference' };
@@ -16,7 +17,7 @@ export function MemoryCard({ parentId, parentName, timeZone }: { parentId: strin
   };
   return (
     <section className="card">
-      <h2>What we’ve noticed</h2>
+      <h2><span className="h-ic t-green"><Icon name="memory" size={15} /></span>What we’ve noticed</h2>
       <p className="tiny" style={{ marginTop: 2, marginBottom: 10 }}>
         Patterns across weeks of {parentName}’s messages that are easy to miss day to day. Each one shows where it came from. Kept ones help answer your questions.
       </p>

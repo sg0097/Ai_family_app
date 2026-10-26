@@ -1,7 +1,8 @@
 import { createContext, useContext, useLayoutEffect, useRef, useState } from 'react';
 import { Navigate, NavLink, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { api } from '../../api';
-import { useSession } from '../../App';
+import { SECTIONS, useSession } from '../../App';
+import { Icon } from '../../components/Icon';
 import { PhoneDrawer } from '../../components/PhoneDrawer';
 import { Avatar, Skeleton } from '../../components/ui';
 import { fmtAgo, timeDifference } from '../../format';
@@ -23,14 +24,6 @@ interface Ctx {
 const ParentCtx = createContext<Ctx>(null!);
 export const useParent = () => useContext(ParentCtx);
 
-const TABS = [
-  ['', 'Today'],
-  ['reminders', 'Reminders'],
-  ['care', 'Care'],
-  ['report', 'Weekly report'],
-  ['history', 'History'],
-  ['settings', 'Settings'],
-] as const;
 
 export function ParentDashboard() {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +35,8 @@ export function ParentDashboard() {
   if (!today || today.parent.id !== id) return <div className="simple"><Skeleton h={80} /><Skeleton h={200} /><Skeleton h={320} /></div>;
 
   const p = today.parent;
+  const rest = location.pathname.split(`/app/p/${id}`)[1]?.replace(/^\//, '').split('/')[0] ?? '';
+  const section = SECTIONS.find((s) => s.path === rest) ?? (rest === 'doctor-report' ? SECTIONS[2] : undefined);
   const reloadAll = () => {
     reload();
     refreshFamily();
@@ -51,9 +46,9 @@ export function ParentDashboard() {
     <ParentCtx.Provider value={{ id: id!, today, reload: reloadAll }}>
       <div className="parent-area">
       <header className="p-head">
-        <Avatar name={p.name} size={40} />
+        <Avatar name={p.name} size={48} />
         <div>
-          <h1>{p.name}</h1>
+          <h1>{p.name}{section && <span className={`p-section t-${section.tone}`}><Icon name={section.icon} size={13} />{section.label}</span>}</h1>
           <p className="muted small">
             <span className="live" title="This page updates by itself every few seconds"><i />Live</span>
             {' · '}
@@ -111,9 +106,9 @@ function Tabs({ id, label }: { id: string; label: string }) {
   return (
     <nav className="tabs" aria-label={label} ref={nav}>
       {box && <span className="tab-indicator" style={{ width: box.w, transform: `translateX(${box.x - 4}px)`, left: 4 }} aria-hidden />}
-      {TABS.map(([path, text]) => (
-        <NavLink key={path} to={path ? `/app/p/${id}/${path}` : `/app/p/${id}`} end={path === ''} className={({ isActive }) => (isActive ? 'active' : '')}>
-          {text}
+      {SECTIONS.map((s) => (
+        <NavLink key={s.path} to={s.path ? `/app/p/${id}/${s.path}` : `/app/p/${id}`} end={s.path === ''} className={({ isActive }) => (isActive ? 'active' : '')}>
+          <span className={`tab-ic t-${s.tone}`}><Icon name={s.icon} size={13} /></span>{s.label}
         </NavLink>
       ))}
     </nav>

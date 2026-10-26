@@ -19,9 +19,13 @@ export function Logo({ to = '/', tagline = true }: { to?: string; tagline?: bool
   );
 }
 
+const AVATAR_TONES = ['violet', 'pink', 'blue', 'green', 'orange', 'amber'];
+
+/** Initial on a colour picked from the name, so each person keeps the same colour everywhere. */
 export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+  const tone = AVATAR_TONES[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_TONES.length];
   return (
-    <span className="avatar" style={{ width: size, height: size, fontSize: size * 0.42 }} aria-hidden>
+    <span className={`avatar av-${tone}`} style={{ width: size, height: size, fontSize: size * 0.42 }} aria-hidden>
       {name.trim().charAt(0).toUpperCase()}
     </span>
   );

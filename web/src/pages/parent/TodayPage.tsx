@@ -107,7 +107,7 @@ export function TodayPage() {
       {!hasReminders ? (
         <SetupReminders name={p.name} onPick={(start) => setDialog({ start })} />
       ) : (
-        <section className="board-card">
+        <section className="board-card" id="today-tiles">
           {week.data ? (
             <DayStrip week={week.data} selected={selected} onSelect={setSelected} onWeek={moveWeek} canNext={!thisWeek} />
           ) : <Skeleton h={86} />}
