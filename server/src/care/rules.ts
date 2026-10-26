@@ -1,3 +1,5 @@
+import { Prisma } from '@prisma/client';
+import { planOf } from '../lib/plan.js';
 import { DateTime } from 'luxon';
 import { appointmentReminder, followUp } from '../conversation/copy.js';
 import { daysLeft } from './refill.js';
@@ -79,7 +81,8 @@ export async function runCareRules(now: DateTime = DateTime.utc()) {
   const reports = await weeklyReportReady(now);
   const refills = await refillAlerts(now);
   const appointments = await appointmentReminders(now);
-  return { followUps, alerts, reports, refills, appointments };
+  const midday = await middaySummaries(now);
+  return { followUps, alerts, reports, refills, appointments, midday };
 }
 
 /** Reminders are going out but nothing has come back for a day. One alert per quiet spell. */
@@ -184,6 +187,52 @@ export async function appointmentReminders(now: DateTime): Promise<number> {
       const claimed = await prisma.appointment.updateMany({ where: { id: a.id, remindedSameDay: null }, data: { remindedSameDay: now.toJSDate() } });
       if (claimed.count !== 1) continue;
       await enqueueOutbound({ parentId: a.parentId, toPhone: a.parent.phone, ...appointmentReminder(a.parent, a, 'today') });
+      n++;
+    }
+  }
+  return n;
+}
+
+const MIDDAY_HOUR = 13; // 1 PM, parent's time
+
+/**
+ * The 1 PM summary: how the parent's day is going so far, on WhatsApp, for each person who
+ * turned it on (Family plan). Once per person per day; stated as replies, never as missed doses.
+ */
+export async function middaySummaries(now: DateTime): Promise<number> {
+  const parents = await prisma.parentProfile.findMany({
+    where: { consentStatus: 'GRANTED' },
+    include: { user: true, members: { include: { user: true } } },
+  });
+  let n = 0;
+  for (const p of parents) {
+    const local = now.setZone(p.timezone);
+    if (local.hour !== MIDDAY_HOUR) continue;
+    const owner = planOf(p.user);
+    const people = [p.user, ...p.members.map((m) => m.user)].filter((u) => u.middaySummary && u.phone && owner.family);
+    if (!people.length) continue;
+
+    const today = local.toISODate()!;
+    const occs = await prisma.routineOccurrence.findMany({
+      where: { parentId: p.id, localDate: today, scheduledFor: { lte: now.toJSDate() } },
+      include: { routine: true },
+      orderBy: { scheduledFor: 'asc' },
+    });
+    if (!occs.length) continue;
+    const done = occs.filter((o) => o.status === 'DONE').length;
+    const waiting = occs.filter((o) => o.status === 'SENT' || o.status === 'NOT_DONE').map((o) => o.routine.name);
+    const title = `${p.name} so far today: ${done} of ${occs.length} done`;
+    const body = waiting.length ? `Still waiting for a reply: ${waiting.join(', ')}.` : 'Everything so far is answered.';
+
+    for (const u of people) {
+      const key = `midday:${p.id}:${today}:${u.id}`;
+      try {
+        await prisma.notification.create({ data: { userId: u.id, parentId: p.id, kind: 'MIDDAY', title, body, dedupeKey: key, whatsappAt: new Date() } });
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') continue; // already sent today
+        throw err;
+      }
+      await enqueueOutbound({ parentId: p.id, toPhone: u.phone!, alwaysTemplate: true, session: { text: `${title}\n${body}` }, template: { name: 'child_update', params: [u.name, title, body] } });
       n++;
     }
   }

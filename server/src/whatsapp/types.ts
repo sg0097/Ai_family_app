@@ -26,7 +26,14 @@ export interface InboundMessage {
   timestamp: Date;
 }
 
+/** A recorded voice note. WhatsApp accepts audio/ogg (opus), audio/mp4, audio/aac, audio/mpeg and audio/amr. */
+export interface AudioMessage {
+  data: Buffer;
+  mime: string;
+}
+
 export interface WhatsAppProvider {
   sendSession(to: string, msg: SessionMessage): Promise<string>;
+  sendAudio(to: string, audio: AudioMessage): Promise<string>;
   sendTemplate(to: string, tpl: TemplateMessage, preview: SessionMessage): Promise<string>;
 }

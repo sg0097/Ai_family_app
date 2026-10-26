@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Num } from '../../components/Num';
 import { ColumnChart, LineChart } from '../../components/charts';
 import { Icon, RoutineIcon } from '../../components/Icon';
 import { Skeleton } from '../../components/ui';
@@ -55,10 +56,10 @@ export function ReportPage() {
       </section>
 
       <section className="glance" aria-label="At a glance">
-        <Glance icon="MEDICINE" label="Medicine" big={g.medicine.asked ? <>{g.medicine.done}<small> of {g.medicine.asked}</small></> : '—'} sub={g.medicine.change ?? 'confirmed'} />
-        <Glance icon="BP" label="BP readings" big={g.bp.count} sub={g.bp.change ?? '—'} />
-        <Glance icon="WATER" label="Water a day" big={g.water.avg != null ? <>{g.water.avg}<small>{g.water.goal ? ` / ${g.water.goal}` : ''} gl</small></> : '—'} sub={g.water.change ?? (g.water.days ? `reported on ${g.water.days} days` : 'not reported')} />
-        <Glance icon="WALK" label="Walks" big={g.walk.asked ? <>{g.walk.done}<small> of {g.walk.asked}</small></> : '—'} sub={g.walk.change ?? 'days'} />
+        <Glance icon="MEDICINE" label="Medicine" big={g.medicine.asked ? <><Num value={g.medicine.done} /><small> of {g.medicine.asked}</small></> : '—'} sub={g.medicine.change ?? 'confirmed'} />
+        <Glance icon="BP" label="BP readings" big={<Num value={g.bp.count} />} sub={g.bp.change ?? '—'} />
+        <Glance icon="WATER" label="Water a day" big={g.water.avg != null ? <><Num value={g.water.avg} /><small>{g.water.goal ? ` / ${g.water.goal}` : ''} gl</small></> : '—'} sub={g.water.change ?? (g.water.days ? `reported on ${g.water.days} days` : 'not reported')} />
+        <Glance icon="WALK" label="Walks" big={g.walk.asked ? <><Num value={g.walk.done} /><small> of {g.walk.asked}</small></> : '—'} sub={g.walk.change ?? 'days'} />
       </section>
 
       <section className="card">

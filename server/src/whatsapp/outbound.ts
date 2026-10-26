@@ -11,6 +11,8 @@ export interface OutboundJob {
   alwaysTemplate?: boolean; // recipient's window is unknown (e.g. alerts to the child)
   windowKnownOpen?: boolean; // caller checked the 24h window itself (e.g. the profile is being deleted)
   occurrenceId?: string;
+  /** The child's voice note, sent just before the text. Only inside the 24h window: it can't go as a template. */
+  voiceClipId?: string;
 }
 
 const SESSION_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -37,6 +39,16 @@ export async function sendOutbound(job: OutboundJob) {
         occurrenceId: job.occurrenceId,
       },
     });
+
+  if (job.voiceClipId && windowOpen) {
+    const clip = await prisma.voiceClip.findUnique({ where: { id: job.voiceClipId } });
+    if (clip) {
+      const waMessageId = await whatsapp.sendAudio(job.toPhone, { data: Buffer.from(clip.data), mime: clip.mime });
+      await prisma.message.create({
+        data: { parentId: job.parentId, direction: 'OUT', toPhone: job.toPhone, body: `🎤 ${clip.label}`, kind: 'audio', voiceClipId: clip.id, waMessageId, occurrenceId: job.occurrenceId },
+      });
+    }
+  }
 
   if (windowOpen) {
     await log('session', await whatsapp.sendSession(job.toPhone, job.session));

@@ -3,7 +3,7 @@ import { careTeam } from '../lib/access.js';
 import { prisma } from '../lib/db.js';
 import { enqueueOutbound } from '../lib/queues.js';
 
-export type NotificationKind = 'NOT_DONE' | 'RESOLVED' | 'SILENCE' | 'HELP' | 'REPORT' | 'SYMPTOM' | 'REFILL' | 'APPOINTMENT' | 'TEAM';
+export type NotificationKind = 'NOT_DONE' | 'RESOLVED' | 'SILENCE' | 'HELP' | 'REPORT' | 'SYMPTOM' | 'REFILL' | 'APPOINTMENT' | 'TEAM' | 'CHECKIN' | 'MIDDAY';
 
 interface NotifyInput {
   parentId: string;

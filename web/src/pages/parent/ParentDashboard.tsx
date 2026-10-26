@@ -51,10 +51,12 @@ export function ParentDashboard() {
     <ParentCtx.Provider value={{ id: id!, today, reload: reloadAll }}>
       <div className="parent-area">
       <header className="p-head">
-        <Avatar name={p.name} size={52} />
+        <Avatar name={p.name} size={40} />
         <div>
           <h1>{p.name}</h1>
           <p className="muted small">
+            <span className="live" title="This page updates by itself every few seconds"><i />Live</span>
+            {' · '}
             {p.relationship}
             {today.lastInboundAt && ` · last message ${fmtAgo(today.lastInboundAt)}`}
           </p>

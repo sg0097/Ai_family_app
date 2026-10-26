@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { Num } from '../../components/Num';
 import { Link } from 'react-router-dom';
 import { api } from '../../api';
+import { CheckInDialog, RecentCheckIns } from '../../components/CheckIn';
 import { Ask } from '../../components/Ask';
 import { Icon, RoutineIcon } from '../../components/Icon';
 import { ReminderDialog, blankReminder, missingSuggestions } from '../../components/ReminderDialog';
@@ -21,6 +23,8 @@ export function TodayPage() {
   const routines = useApi<Routine[]>(`/parents/${id}/routines`);
   const { toast, show } = useToast();
   const [dialog, setDialog] = useState<{ routine?: Routine; start?: RoutineInput } | null>(null);
+  const [checkIn, setCheckIn] = useState(false);
+  const [sentCheckIns, setSentCheckIns] = useState(0);
   const status = dayStatus({ name: p.name, consentStatus: p.consentStatus, lastInboundAt: today.lastInboundAt, alerts: today.alerts.length, routines: today.routines, urgent: today.urgent });
   const list = today.routines.filter((r) => r.status !== 'not_today');
   const later = today.routines.filter((r) => r.status === 'not_today');
@@ -35,108 +39,108 @@ export function TodayPage() {
   };
 
   return (
-    <div className="simple">
-      <StatusCard status={status} phone={p.phone} name={p.name} alertId={today.alerts[0]?.id} onAck={reload} />
+    <div className="dash">
+      <StatusCard status={status} phone={p.phone} name={p.name} alertId={today.alerts[0]?.id} onAck={reload} onCheckIn={consented ? () => setCheckIn(true) : undefined} />
 
-      {!hasReminders ? (
-        <SetupReminders name={p.name} onPick={(start) => setDialog({ start })} />
-      ) : (
-        <section className="card">
-          <div className="spread" style={{ marginBottom: 6 }}>
-            <div className="row" style={{ gap: 14 }}>
-              {list.length > 0 && <Ring value={done} total={list.length} size={56} stroke={6}><b style={{ fontSize: '0.9rem' }}>{done}/{list.length}</b></Ring>}
-              <div>
-                <h2>Today’s reminders</h2>
-                <p className="muted small" style={{ marginTop: 3 }}>{list.length ? `${done} of ${list.length} done${consented ? '' : ' · paused until they say yes'}` : 'Nothing planned today'}</p>
-              </div>
-            </div>
-            <button className="btn ghost sm" onClick={() => setDialog({ start: blankReminder('MEDICINE') })}><Icon name="plus" size={15} /> Add</button>
-          </div>
-          <ul className="checklist">
-            {list.map((r) => <CheckRow key={r.id} r={r} name={p.name} canRemind={consented} onEdit={() => openEdit(r.id)} />)}
-          </ul>
-          <div className="spread wrap" style={{ marginTop: 12, gap: 8 }}>
-            <span className="tiny">
-              {later.length > 0 && `Not today: ${later.map((r) => `${r.name}${r.nextDue ? ` (next ${fmtDate(r.nextDue, { weekday: 'short', day: 'numeric', month: 'short' })})` : ''}`).join(' · ')}`}
-            </span>
-            <Link to="reminders" className="link-btn small">All reminders →</Link>
-          </div>
-        </section>
-      )}
-
-      {today.appointments.length > 0 && (
-        <section className="card">
-          <div className="spread" style={{ marginBottom: 12 }}>
-            <h2>Coming up</h2>
-            <Link to="care" className="link-btn small">Care →</Link>
-          </div>
-          <ul className="appt-list">
-            {today.appointments.map((a) => (
-              <li key={a.id} className="appt upcoming">
-                <span className="appt-date"><b>{fmtDate(a.at, { day: 'numeric' }, p.timezone)}</b><span className="tiny">{fmtDate(a.at, { month: 'short' }, p.timezone)}</span></span>
+      <div className="dash-grid">
+        {!hasReminders ? (
+          <SetupReminders name={p.name} onPick={(start) => setDialog({ start })} />
+        ) : (
+          <section className="card">
+            <div className="spread" style={{ marginBottom: 4 }}>
+              <div className="row" style={{ gap: 12 }}>
+                {list.length > 0 && <Ring value={done} total={list.length} size={44} stroke={5}><b style={{ fontSize: '0.78rem' }}><Num value={done} />/{list.length}</b></Ring>}
                 <div>
-                  <div className="appt-title">{a.title}</div>
-                  <div className="tiny">{fmtDate(a.at, { weekday: 'long' }, p.timezone)} · {fmtClock(a.at, p.timezone)}{a.place ? ` · ${a.place}` : ''}</div>
+                  <h2>Today’s reminders</h2>
+                  <p className="tiny" style={{ marginTop: 2 }}>{list.length ? `${done} of ${list.length} done${consented ? '' : ' · paused until they say yes'}` : 'Nothing planned today'}</p>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {hasReminders && (
-        <div className="two-col">
-          <LatestReadings today={today} />
-          <WeekSoFar />
-        </div>
-      )}
-
-      <FromParent />
-
-      {(goodToKnow.length > 0 || today.pinnedNotes.length > 0) && (
-        <section className="card">
-          <h2 style={{ marginBottom: 12 }}>Good to know</h2>
-          {goodToKnow.length > 0 && <ul className="plain-list">{goodToKnow.map((a, i) => <li key={i}>{a.text}</li>)}</ul>}
-          {today.pinnedNotes.length > 0 && (
-            <ul className="notes" style={{ marginTop: goodToKnow.length ? 14 : 0 }}>
-              {today.pinnedNotes.map((n) => (
-                <li key={n.id} className="pinned"><p>{n.text}</p><span className="tiny">{n.author ?? 'Family'} · pinned note</span></li>
-              ))}
+              </div>
+              <button className="btn ghost sm" onClick={() => setDialog({ start: blankReminder('MEDICINE') })}><Icon name="plus" size={14} /> Add</button>
+            </div>
+            <ul className="checklist">
+              {list.map((r) => <CheckRow key={r.id} r={r} name={p.name} canRemind={consented} onEdit={() => openEdit(r.id)} />)}
             </ul>
+            <div className="spread wrap" style={{ marginTop: 8, gap: 8 }}>
+              <span className="tiny">
+                {later.length > 0 && `Not today: ${later.map((r) => `${r.name}${r.nextDue ? ` (next ${fmtDate(r.nextDue, { weekday: 'short', day: 'numeric', month: 'short' })})` : ''}`).join(' · ')}`}
+              </span>
+              <Link to="reminders" className="link-btn small">All reminders →</Link>
+            </div>
+          </section>
+        )}
+
+        <div className="dash-side">
+          {today.appointments.length > 0 && (
+            <section className="card">
+              <div className="spread" style={{ marginBottom: 8 }}>
+                <h2>Coming up</h2>
+                <Link to="care" className="link-btn small">Care →</Link>
+              </div>
+              <ul className="appt-list">
+                {today.appointments.map((a) => (
+                  <li key={a.id} className="appt upcoming">
+                    <span className="appt-date"><b>{fmtDate(a.at, { day: 'numeric' }, p.timezone)}</b><span className="tiny">{fmtDate(a.at, { month: 'short' }, p.timezone)}</span></span>
+                    <div>
+                      <div className="appt-title">{a.title}</div>
+                      <div className="tiny">{fmtDate(a.at, { weekday: 'long' }, p.timezone)} · {fmtClock(a.at, p.timezone)}{a.place ? ` · ${a.place}` : ''}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
-        </section>
-      )}
+          {hasReminders && <LatestReadings today={today} />}
+          {hasReminders && <WeekSoFar />}
+        </div>
+      </div>
+
+      <div className="dash-row">
+        <FromParent extra={<RecentCheckIns parentId={id} parentName={p.name} version={sentCheckIns} />} />
+        {(goodToKnow.length > 0 || today.pinnedNotes.length > 0) && (
+          <section className="card">
+            <h2 style={{ marginBottom: 8 }}>Good to know</h2>
+            {goodToKnow.length > 0 && <ul className="plain-list">{goodToKnow.map((a, i) => <li key={i}>{a.text}</li>)}</ul>}
+            {today.pinnedNotes.length > 0 && (
+              <ul className="notes" style={{ marginTop: goodToKnow.length ? 10 : 0 }}>
+                {today.pinnedNotes.map((n) => (
+                  <li key={n.id} className="pinned"><p>{n.text}</p><span className="tiny">{n.author ?? 'Family'} · pinned note</span></li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+      </div>
 
       {consented && <Ask parentId={id} name={p.name} />}
-
-      <Link to="report" className="next-link">See {p.name}’s weekly report →</Link>
 
       {dialog && (
         <ReminderDialog parentId={id} parentName={p.name} language={p.language ?? 'HINGLISH'} routine={dialog.routine} start={dialog.start} onClose={() => setDialog(null)}
           onSaved={(m) => { setDialog(null); show(m); reload(); routines.reload(); }} />
+      )}
+      {checkIn && (
+        <CheckInDialog parentId={id} parentName={p.name} onClose={() => setCheckIn(false)} onSent={() => { setCheckIn(false); setSentCheckIns((n) => n + 1); show(`Sent to ${p.name} on WhatsApp`); }} />
       )}
       <Toast message={toast} />
     </div>
   );
 }
 
-function StatusCard({ status, phone, name, alertId, onAck }: { status: ReturnType<typeof dayStatus>; phone: string; name: string; alertId?: string; onAck: () => void }) {
+function StatusCard({ status, phone, name, alertId, onAck, onCheckIn }: { status: ReturnType<typeof dayStatus>; phone: string; name: string; alertId?: string; onAck: () => void; onCheckIn?: () => void }) {
   const urgent = status.tone === 'help' || status.tone === 'needs';
   return (
     <section className={`status-card ${status.tone}`} aria-live="polite">
-      <div className="status-icon" aria-hidden><Icon name={status.icon} size={26} /></div>
+      <div className="status-icon" aria-hidden><Icon name={status.icon} size={20} /></div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <h1>{status.title}</h1>
         <p className="status-detail">{status.detail}</p>
         {status.needs.length > 0 && <ul className="need-list">{status.needs.map((n) => <li key={n}>{n}</li>)}</ul>}
-        {urgent && (
-          <div className="row wrap" style={{ marginTop: 16, gap: 8 }}>
-            <a className="btn lg" href={`tel:+${phone}`}><Icon name="phone" size={18} /> Call {name}</a>
-            {status.tone === 'help' && alertId && (
-              <button className="btn ghost lg" onClick={() => api(`/alerts/${alertId}/ack`, { method: 'POST' }).then(onAck)}>I’ve called</button>
-            )}
-          </div>
+      </div>
+      <div className="status-actions">
+        {status.tone === 'help' && alertId && (
+          <button className="btn ghost" onClick={() => api(`/alerts/${alertId}/ack`, { method: 'POST' }).then(onAck)}>I’ve called</button>
         )}
+        {onCheckIn && status.tone !== 'help' && <button className="btn ghost" onClick={onCheckIn}><Icon name="message" size={15} /> Check in</button>}
+        <a className={`btn${urgent ? '' : ' ghost'}`} href={`tel:+${phone}`}><Icon name="phone" size={15} /> Call {name}</a>
       </div>
     </section>
   );
@@ -202,7 +206,7 @@ function CheckRow({ r, name, canRemind, onEdit }: { r: Row; name: string; canRem
   return (
     <li className={`check ${r.status}`}>
       <span className="check-mark" aria-hidden>
-        {r.status === 'done' ? <Icon name="check" size={20} stroke={2.2} /> : <RoutineIcon type={r.type} size={40} />}
+        {r.status === 'done' ? <Icon name="check" size={16} stroke={2.2} /> : <RoutineIcon type={r.type} size={30} />}
       </span>
       <button className="check-body as-button" onClick={onEdit} aria-label={`Change ${r.name}`}>
         <div className="check-title">{cap(r.name)}</div>
@@ -250,7 +254,7 @@ function LatestReadings({ today }: { today: Today }) {
       <ul className="readings">
         {rows.map((x) => (
           <li key={x.type}>
-            <RoutineIcon type={x.type} size={32} />
+            <RoutineIcon type={x.type} size={26} />
             <span className="small muted">{x.label}</span>
             {x.value ? (
               <span className="reading-val"><b>{x.value}</b><span className="tiny">{fmtAgo(x.at)}</span></span>
@@ -295,14 +299,13 @@ function WeekSoFar() {
 }
 
 /** The last few things the parent wrote, in their own words. */
-function FromParent() {
+function FromParent({ extra }: { extra?: React.ReactNode }) {
   const { id, today } = useParent();
   const { data } = useApi<ChatMessage[]>(`/parents/${id}/messages?limit=60`, 15000);
   const said = (data ?? []).filter((m) => m.direction === 'IN' && m.kind === 'text').slice(-3).reverse();
-  if (!said.length) return null;
   return (
     <section className="card">
-      <div className="spread" style={{ marginBottom: 12 }}>
+      <div className="spread" style={{ marginBottom: 8 }}>
         <h2>From {today.parent.name}</h2>
         <Link to="history?view=messages" className="link-btn small">All messages →</Link>
       </div>
@@ -314,6 +317,8 @@ function FromParent() {
           </li>
         ))}
       </ul>
+      {!said.length && <p className="tiny empty-line">Nothing written yet. Their own words show up here.</p>}
+      {extra}
     </section>
   );
 }

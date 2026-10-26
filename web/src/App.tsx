@@ -4,10 +4,12 @@ import { api, getToken, setToken } from './api';
 import { NotificationBell } from './components/NotificationBell';
 import { Avatar, Logo, Modal } from './components/ui';
 import { browserTimeZone } from './format';
+import { useScrollReveal } from './motion';
 import { ForgotPage, InvitePage, ResetPage } from './pages/AccountPages';
 import { AuthPage } from './pages/AuthPage';
 import { FamilyPage } from './pages/FamilyPage';
 import { Landing } from './pages/Landing';
+import { PlanPage } from './pages/PlanPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { ParentDashboard } from './pages/parent/ParentDashboard';
 import type { FamilyMember, User } from './types';
@@ -70,6 +72,7 @@ export function App() {
     setUser,
   };
 
+  useScrollReveal();
   if (loading) return null;
   const guard = (el: JSX.Element) => (user ? <AppShell>{el}</AppShell> : <Navigate to="/login" replace />);
   return (
@@ -84,6 +87,7 @@ export function App() {
         <Route path="/invite/:token" element={<InvitePage />} />
         <Route path="/app" element={guard(<FamilyPage />)} />
         <Route path="/app/new" element={guard(<OnboardingPage />)} />
+        <Route path="/app/plan" element={guard(<PlanPage />)} />
         <Route path="/app/p/:id/*" element={guard(<ParentDashboard />)} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -95,9 +99,10 @@ type Theme = 'system' | 'light' | 'dark';
 function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
     try {
-      return (localStorage.getItem('afc_theme') as Theme) || 'system';
+      // Light by default; dark (or following the system) is a choice in the menu.
+      return (localStorage.getItem('afc_theme') as Theme) || 'light';
     } catch {
-      return 'system';
+      return 'light';
     }
   });
   useEffect(() => {
@@ -147,7 +152,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     <div style={{ fontWeight: 600 }}>{user?.name}</div>
                     <div className="tiny">{user?.email}</div>
                   </div>
-                  <Link to="/app" role="menuitem">Family</Link>
+                  <Link to="/app" role="menuitem" onClick={() => setOpen(false)}>Family</Link>
+                  <Link to="/app/plan" role="menuitem" onClick={() => setOpen(false)}>
+                    Plan · {user?.plan.plan === 'FAMILY' ? 'Family' : user?.plan.trialDaysLeft ? `trial, ${user.plan.trialDaysLeft} days left` : 'Free'}
+                  </Link>
                   <div style={{ padding: '6px 12px' }}>
                     <div className="tiny" style={{ marginBottom: 6 }}>Theme</div>
                     <div className="segmented">

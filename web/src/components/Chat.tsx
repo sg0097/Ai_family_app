@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { VoicePlay } from './Voice';
 import { fmtClock, fmtDate } from '../format';
 import type { ChatMessage } from '../types';
 
@@ -42,7 +43,7 @@ export function Chat({ messages, parentPhone, asParent, onTap, height = 520, tim
             )}
             <div className={`bubble ${m.direction === 'IN' ? 'parent' : 'system'}`}>
               {toChild && <div style={{ fontSize: '0.72rem', fontWeight: 600, opacity: 0.7 }}>Alert sent to you</div>}
-              {m.body}
+              {m.kind === 'audio' && m.voiceClipId ? <VoicePlay id={m.voiceClipId} seconds={0} label={m.body} /> : m.body}
               {m.buttons && m.buttons.length > 0 && (
                 <div className="bb">
                   {m.buttons.map((b) => (

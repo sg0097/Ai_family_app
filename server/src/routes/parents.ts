@@ -1,3 +1,4 @@
+import { FREE_PARENTS, planOf, requireFamily } from '../lib/plan.js';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { DateTime } from 'luxon';
 import { z } from 'zod';
@@ -142,6 +143,12 @@ export async function parentRoutes(app: FastifyInstance) {
     const phone = normalizePhone(body.phone);
     if (!phone) return reply.code(400).send({ error: 'Enter a valid WhatsApp number' });
     if (await prisma.parentProfile.findUnique({ where: { phone } })) return reply.code(409).send({ error: 'This number is already connected' });
+    const me = await prisma.user.findUniqueOrThrow({ where: { id: req.user.sub }, include: { _count: { select: { parents: true } } } });
+    const { maxParents } = planOf(me);
+    if (me._count.parents >= maxParents) {
+      if (maxParents === FREE_PARENTS) await requireFamily('parents', { userId: me.id });
+      return reply.code(409).send({ error: `You can care for up to ${maxParents} parents on one account` });
+    }
     const parent = await prisma.parentProfile.create({
       data: {
         userId: req.user.sub,
@@ -290,7 +297,7 @@ export async function parentRoutes(app: FastifyInstance) {
       where: { parentId: req.params.id },
       orderBy: { createdAt: 'desc' },
       take: Math.min(Number(req.query.limit) || 50, 200),
-      select: { id: true, direction: true, body: true, kind: true, buttons: true, payload: true, handledBy: true, toPhone: true, createdAt: true },
+      select: { id: true, direction: true, body: true, kind: true, buttons: true, payload: true, handledBy: true, toPhone: true, voiceClipId: true, createdAt: true },
     });
     return messages.reverse();
   });

@@ -89,6 +89,9 @@ export async function buildFacts(parentId: string): Promise<string[]> {
       : 'No symptoms mentioned in the last 30 days.',
   );
   if (alerts.length) facts.push(`HELP was sent on: ${alerts.map((a) => fmtWhen(a.createdAt)).join(', ')}.`);
+  // Patterns the family chose to keep, each already backed by stored messages.
+  const kept = await prisma.memory.findMany({ where: { parentId, status: 'KEPT' } });
+  for (const m of kept) facts.push(`The family noted: ${m.text}.`);
   return facts;
 }
 

@@ -7,7 +7,41 @@ export interface User {
   email: string;
   phone: string | null;
   whatsappAlerts: boolean;
+  middaySummary: boolean;
   timezone: string | null;
+  plan: PlanInfo;
+}
+
+export interface PlanInfo {
+  plan: 'FREE' | 'FAMILY';
+  family: boolean; // Family features open (paid or trial)
+  trialDaysLeft: number;
+  renewsAt: string | null;
+  priceInr: number;
+  maxParents: number;
+}
+
+export interface VoiceClip {
+  id: string;
+  label: string;
+  seconds: number;
+  mime: string;
+  createdAt: string;
+  author: string;
+  routines: { id: string; name: string }[];
+}
+
+export interface CheckIns {
+  ideas: string[];
+  recent: { id: string; text: string; from: string; voice: string | null; answer: 'good' | 'okay' | 'low' | null; answeredAt: string | null; createdAt: string }[];
+}
+
+export interface Memory {
+  id: string;
+  kind: 'HEALTH' | 'HABIT' | 'PREFERENCE';
+  text: string;
+  evidence: { at: string; quote: string }[];
+  status: 'SUGGESTED' | 'KEPT';
 }
 
 export interface ParentSummary {
@@ -37,6 +71,7 @@ export interface CareFields {
 export interface Routine extends ScheduleFields, CareFields {
   id: string;
   medicineId: string | null;
+  voiceClipId: string | null;
   type: RoutineType;
   name: string;
   timeOfDay: string;
@@ -139,6 +174,7 @@ export interface ChatMessage {
   payload: string | null;
   handledBy: string | null;
   toPhone: string | null;
+  voiceClipId: string | null;
   createdAt: string;
 }
 

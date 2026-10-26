@@ -1,3 +1,4 @@
+import { requireFamily } from '../lib/plan.js';
 import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
@@ -50,6 +51,7 @@ export async function teamRoutes(app: FastifyInstance) {
     if (!isOwner) throw new HttpError(403, `Only ${parent.user.name} can invite people to ${parent.name}’s care team`);
     const { email } = z.object({ email: z.string().trim().toLowerCase().email() }).parse(req.body);
     if (email === parent.user.email) throw new HttpError(400, 'That’s your own email');
+    await requireFamily('team', { parentId: parent.id });
     const existing = await prisma.careMember.findFirst({ where: { parentId: parent.id, user: { email } } });
     if (existing) throw new HttpError(409, 'They’re already on the care team');
 

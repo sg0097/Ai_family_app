@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 
@@ -31,7 +31,13 @@ export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
 export function Ring({ value, total, size = 120, stroke = 11, children }: { value: number; total: number; size?: number; stroke?: number; children?: ReactNode }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const p = total ? Math.min(1, value / total) : 0;
+  const target = total ? Math.min(1, value / total) : 0;
+  // Start empty, then fill: the stroke transition animates it.
+  const [p, setP] = useState(0);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setP(target));
+    return () => cancelAnimationFrame(id);
+  }, [target]);
   return (
     <div className="ring-wrap" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${value} of ${total} done`}>

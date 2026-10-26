@@ -89,14 +89,23 @@ Key ideas in the data model (`server/prisma/schema.prisma`):
 - **Languages:** every WhatsApp message (reminders, follow-ups, replies, appointment reminders) is written in Hinglish, Hindi (Devanagari) or English (`conversation/copy.ts`). The reply rules understand Hindi-script answers such as "हाँ", "ले ली", "नहीं" and Devanagari digits. In-app previews are built by the same server code, so they always match.
 - **Password reset:** the emailed link works once, for an hour, and only its hash is stored. Resetting signs out every older session.
 
-## Brand: "a letter from home"
+## Brand: clean and calm
 
-The look is deliberate, so new screens should follow it (tokens at the top of `web/src/styles.css`):
+The look is deliberate, so new screens should follow it (tokens at the top of `web/src/styles.css`, with later layers at the end: "Clean & compact" and "Calm accents"):
 
-- **Paper, not glass:** cream page, flat cards with warm hairlines. No gradient glows, blur or floating panels.
-- **Three typefaces, each with one job:** *Fraunces* for headings and numbers, *Mukta* for reading (it supports Devanagari), and *Kalam* (handwriting) **only for the parent's own words**. That last one is the signature.
-- **Household palette:** ink `#2b2420`, sindoor `#b5432b` (the one accent, for the main action), haldi `#e3a72f` (highlighter marks), leaf `#346b3d` (done), indigo `#2e4a7a`. Every text pair passes WCAG AA in light and dark mode.
-- **Details:** emphasis is a haldi highlighter stroke (`<em>` in headings), never italics. Status labels look like stamps, tabs are underlined, icons are one line set with no emoji outside WhatsApp previews, and the logo is a hand-drawn home with a heart window, with the line "ghar ki khabar".
+- **White and quiet:** white page, hairline borders instead of shadows, small type (14px in the app) and tight spacing so a parent's day fits on one screen. Today is a dashboard grid: reminders on the left, visits, readings and the week on the right.
+- **Colour:** soft ink for text and links, a lime accent only for the main action, sage (`--ok`) only for small marks like progress and "done", and pastel tiles (sage, sky, sand, lilac). No bold green text.
+- **Type:** *Plus Jakarta Sans* (variable) for everything, *Mukta* for Devanagari, and *Kalam* (handwriting) **only for the parent's own words**.
+- **Motion:** cards reveal on scroll, numbers count up, rings fill, bars grow and charts draw (`web/src/motion.ts`). All of it is turned off for `prefers-reduced-motion` and in print.
+- Every text pair passes WCAG AA in light and dark mode.
+
+## Voice, check-ins, memory and plans
+
+- **Voice notes:** the child records up to a minute in the browser (Care → Your voice). A clip can play with any reminder, sent just before the text, or go with a check-in. Audio can only go inside WhatsApp's 24-hour window, so outside it the reminder goes as text only. Clips are stored in Postgres (≤ 1 MB each, 20 per parent); move them to object storage if that grows. **Before going live:** Chrome records WebM, which WhatsApp rejects, so add a conversion to OGG/Opus (e.g. ffmpeg) in `whatsapp/meta.ts`. Safari records MP4, which works as it is.
+- **Check-ins:** "Check in" on Today sends a short note from the child, with three one-tap answers (good, okay, not so good). The answer is stored as how they felt, and the family is told. At most 5 a day.
+- **Memory:** a deterministic worker (`care/memory.ts`, no AI) looks for patterns over 30 days: a symptom on 3 or more days, not feeling good on 3 or more days, the same words with a routine ("after breakfast"), and replies that usually come well after the reminder time. Each pattern carries its evidence. The family keeps or dismisses it, and dismissed ones never come back. Kept ones are given to Ask as facts.
+- **Plans:** Free covers everything safety-related (reminders, alerts, HELP, reports, medicines, doctor report). Family (₹199/month) adds voice notes, up to 4 parents, sharing with siblings and the 1 PM WhatsApp summary. New accounts get a 14-day trial. Parent features follow the plan of whoever added the parent. Payments aren't connected yet: in demo/dev, upgrading is simulated, and in live it says payments are coming (Razorpay is the next step).
+- **1 PM summary:** for people who turn it on (Family dashboard → alerts), a WhatsApp note at 1 PM parent time with what's done so far and what's still waiting.
 
 ## Safety and privacy rules
 
@@ -126,10 +135,10 @@ For real parents: set `APP_MODE=live`, `WHATSAPP_PROVIDER=meta` and the `META_*`
 
 1. Create a WhatsApp Business app in Meta, then set `WHATSAPP_PROVIDER=meta` and the `META_*` vars.
 2. Point the webhook to `https://<host>/api/webhooks/whatsapp` (signature-verified with `META_APP_SECRET`).
-3. Get these templates approved, in each language you offer (`en` for Hinglish, `hi`, `en_GB`): `consent_request`, `routine_confirm`, `routine_followup`, `reading_request`, `wellbeing_check`, `appointment_reminder`, `child_update`. Parameters and buttons are listed in `server/src/conversation/copy.ts`.
+3. Get these templates approved, in each language you offer (`en` for Hinglish, `hi`, `en_GB`): `consent_request`, `routine_confirm`, `routine_followup`, `reading_request`, `wellbeing_check`, `appointment_reminder`, `child_update`, `child_checkin`. Parameters and buttons are listed in `server/src/conversation/copy.ts`.
 
 In production, run the API and workers separately with `ROLE=api` / `ROLE=worker`.
 
 ## Not built yet
 
-Long-term memory table (recurring symptoms are computed from events for now), LLM-written summaries, voice clips, doctor-visit PDF, billing, and parents shared between siblings (`ParentProfile.phone` is unique).
+LLM-written summaries, real payments (Razorpay), WebM → OGG conversion for live voice notes, and real WhatsApp (the Meta adapter has never run against Meta). Phone simulator stays until real WhatsApp is connected.

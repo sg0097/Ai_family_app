@@ -1,3 +1,5 @@
+import { MemoryCard } from '../../components/MemoryCard';
+import { VoiceLibrary } from '../../components/Voice';
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../api';
@@ -12,12 +14,22 @@ import { useParent } from './ParentDashboard';
 /** Medicines as prescribed, doctor visits, and notes the family shares. */
 export function CarePage() {
   const { toast, show } = useToast();
+  const { id, today } = useParent();
+  const p = today.parent;
   return (
-    <div className="simple">
+    <div className="dash">
       <DoctorReportCard />
-      <Medicines notify={show} />
-      <Appointments notify={show} />
-      <Notes notify={show} />
+      <div className="dash-grid">
+        <div className="dash-side">
+          <Medicines notify={show} />
+          <Appointments notify={show} />
+          <Notes notify={show} />
+        </div>
+        <div className="dash-side">
+          <VoiceLibrary parentId={id} parentName={p.name} notify={show} />
+          <MemoryCard parentId={id} parentName={p.name} timeZone={p.timezone} />
+        </div>
+      </div>
       <Toast message={toast} />
     </div>
   );

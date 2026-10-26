@@ -1,3 +1,4 @@
+import { VoicePicker } from './Voice';
 import { useState, type FormEvent } from 'react';
 import { api } from '../api';
 import { ROUTINE_LABEL, fmtTime } from '../format';
@@ -52,6 +53,7 @@ interface Props {
 
 export function ReminderDialog({ parentId, parentName, language, routine, start, onClose, onSaved }: Props) {
   const editing = Boolean(routine);
+  const [voice, setVoice] = useState<string | null>(routine?.voiceClipId ?? null);
   const [f, setF] = useState<RoutineInput>(routine ?? start ?? blankReminder('MEDICINE'));
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -128,6 +130,12 @@ export function ReminderDialog({ parentId, parentName, language, routine, start,
           <div>
             <label className="field-label" htmlFor="rd-goal">Daily goal (glasses)</label>
             <input className="input" id="rd-goal" type="number" min={1} max={30} value={f.target ?? 8} onChange={(e) => setF({ ...f, target: Number(e.target.value) })} style={{ width: 120 }} />
+          </div>
+        )}
+        {routine && (
+          <div>
+            <span className="field-label">Play your voice with it <span className="muted">(sent just before the message)</span></span>
+            <VoicePicker parentId={parentId} routineId={routine.id} value={voice} onChange={setVoice} />
           </div>
         )}
         <div>

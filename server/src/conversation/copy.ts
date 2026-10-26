@@ -12,6 +12,7 @@ import type { SessionMessage, TemplateMessage } from '../whatsapp/types.js';
 export const payload = {
   occurrence: (id: string, answer: 'done' | 'not_done') => `occ:${id}:${answer}`,
   wellbeing: (id: string, level: 'good' | 'okay' | 'low') => `wb:${id}:${level}`,
+  checkIn: (id: string, level: 'good' | 'okay' | 'low') => `ci:${id}:${level}`,
   consent: (answer: 'yes' | 'no') => `consent:${answer}`,
   emergency: 'emergency',
 };
@@ -61,6 +62,9 @@ interface Strings {
   apptTomorrow: (n: string, when: string, title: string, place: string) => string;
   apptToday: (n: string, when: string, title: string, place: string) => string;
   time: (d: DateTime) => string;
+  checkIn: (family: string, text: string) => string;
+  checkInIdeas: (n: string) => string[];
+  ackCheckIn: (family: string) => string;
 }
 
 const period = (h: number, words: [string, string, string, string]) => (h < 12 ? words[0] : h < 16 ? words[1] : h < 19 ? words[2] : words[3]);
@@ -113,6 +117,9 @@ const HINGLISH: Strings = {
   apptTomorrow: (n, when, title, place) => `${n}, kal ${when} ${title} ke paas jaana hai${place} 🗓️ Yaad dila rahi thi ❤️`,
   apptToday: (n, when, title, place) => `${n}, aaj ${when} ${title} ke paas jaana hai${place} 🗓️`,
   time: (d) => `${period(d.hour, ['subah', 'dopahar', 'shaam', 'raat'])} ${hm(d)} baje`,
+  checkIn: (f, text) => `${f} ka message: “${text}”\nEk tap mein bata dijiye ❤️`,
+  checkInIdeas: (n) => [`${n}, kaisi ho? Khana kha liya?`, `${n}, aaj din kaisa gaya?`, `${n}, yaad aa rahi thi aapki ❤️`],
+  ackCheckIn: (f) => `${f} ko bata diya ❤️`,
 };
 
 const HINDI: Strings = {
@@ -162,6 +169,9 @@ const HINDI: Strings = {
   apptTomorrow: (n, when, title, place) => `${n}, कल ${when} ${title} के पास जाना है${place} 🗓️ याद दिला रही थी ❤️`,
   apptToday: (n, when, title, place) => `${n}, आज ${when} ${title} के पास जाना है${place} 🗓️`,
   time: (d) => `${period(d.hour, ['सुबह', 'दोपहर', 'शाम', 'रात'])} ${hm(d)} बजे`,
+  checkIn: (f, text) => `${f} का संदेश: “${text}”\nएक टैप में बता दीजिए ❤️`,
+  checkInIdeas: (n) => [`${n}, कैसी हो? खाना खा लिया?`, `${n}, आज दिन कैसा गया?`, `${n}, आपकी याद आ रही थी ❤️`],
+  ackCheckIn: (f) => `${f} को बता दिया ❤️`,
 };
 
 const ENGLISH: Strings = {
@@ -211,6 +221,9 @@ const ENGLISH: Strings = {
   apptTomorrow: (n, when, title, place) => `${n}, a reminder: tomorrow at ${when} you have ${title}${place} 🗓️`,
   apptToday: (n, when, title, place) => `${n}, today at ${when} you have ${title}${place} 🗓️`,
   time: (d) => d.toFormat('h:mm a'),
+  checkIn: (f, text) => `A message from ${f}: “${text}”\nOne tap to reply ❤️`,
+  checkInIdeas: (n) => [`${n}, how are you? Have you eaten?`, `${n}, how was your day?`, `${n}, thinking of you ❤️`],
+  ackCheckIn: (f) => `I’ve told ${f} ❤️`,
 };
 
 const STRINGS: Record<Language, Strings> = { HINGLISH, HINDI, ENGLISH };
@@ -304,4 +317,17 @@ export function appointmentReminder(parent: ParentProfile, appt: Appointment, wh
   const place = appt.place ? ` (${appt.place})` : '';
   const text = which === 'tomorrow' ? t.apptTomorrow(parent.name, when, appt.title, place) : t.apptToday(parent.name, when, appt.title, place);
   return { session: { text }, template: { name: 'appointment_reminder', language: TEMPLATE_LANG[parent.language], params: [parent.name, when, appt.title] } };
+}
+
+/** The child asking "how are you?", with the same three one-tap answers as the daily check. */
+export function checkIn(parent: ParentProfile, family: string, checkInId: string, text: string): Out {
+  const t = strings(parent.language);
+  const buttons = (['good', 'okay', 'low'] as const).map((level) => ({
+    id: payload.checkIn(checkInId, level),
+    title: { good: t.feelGood, okay: t.feelOkay, low: t.feelLow }[level],
+  }));
+  return {
+    session: { text: t.checkIn(family, text), buttons },
+    template: { name: 'child_checkin', language: TEMPLATE_LANG[parent.language], params: [family, text], buttonPayloads: buttons.map((b) => b.id) },
+  };
 }

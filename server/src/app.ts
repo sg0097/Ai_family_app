@@ -13,6 +13,7 @@ import { devRoutes } from './routes/dev.js';
 import { parentRoutes } from './routes/parents.js';
 import { teamRoutes } from './routes/team.js';
 import { careRoutes } from './routes/care.js';
+import { familyRoutes } from './routes/family.js';
 import { webhookRoutes } from './routes/webhooks.js';
 
 declare module '@fastify/jwt' {
@@ -63,6 +64,7 @@ export async function buildApp() {
       await api.register(parentRoutes);
       await api.register(teamRoutes);
       await api.register(careRoutes);
+      await api.register(familyRoutes);
       await api.register(webhookRoutes);
       if (isDev) await api.register(devRoutes);
     },

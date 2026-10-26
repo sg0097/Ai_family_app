@@ -75,6 +75,30 @@ export async function processInbound(messageId: string) {
     return flush(outbox);
   }
 
+  // A one-tap answer to the child's check-in: record how they feel and tell the family.
+  const ci = msg.payload?.match(/^ci:([^:]+):(good|okay|low)$/);
+  if (ci) {
+    const level = ci[2] as 'good' | 'okay' | 'low';
+    const checkIn = await prisma.checkIn.findFirst({ where: { id: ci[1], parentId: parent.id }, include: { from: true } });
+    await prisma.$transaction(async (tx) => {
+      if (checkIn && !checkIn.answeredAt) await tx.checkIn.update({ where: { id: checkIn.id }, data: { answer: level, answeredAt: msg.createdAt } });
+      await tx.healthEvent.create({ data: { parentId: parent.id, type: 'WELLBEING', valueText: level, occurredAt: msg.createdAt, source: 'BUTTON', messageId: msg.id } });
+      await markHandled(tx, 'BUTTON');
+    });
+    if (checkIn) {
+      const word = { good: 'good', okay: 'okay', low: 'not so good' }[level];
+      await notifyChild({
+        parentId: parent.id,
+        kind: 'CHECKIN',
+        title: `${parent.name} replied to ${checkIn.from.name}: feeling ${word}`,
+        body: `To “${checkIn.text}”.${level === 'low' ? ' A call might help.' : ''}`,
+        dedupeKey: `checkin:${checkIn.id}`,
+      });
+    }
+    reply({ text: level === 'good' ? t.ackFeelGood : t.ackCheckIn(checkIn?.from.name ?? childName) });
+    return flush(outbox);
+  }
+
   // 3. Understand. Buttons are unambiguous; text goes rules-first, model only when rules aren't sure.
   // Open questions: unanswered reminders, plus "not yet" answers we've since followed up on.
   const pending: Pending[] = await prisma.routineOccurrence.findMany({

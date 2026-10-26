@@ -108,9 +108,9 @@ export function LineChart({ dates, series, unit, height = 220, refLines = [], mi
           const last = pts[pts.length - 1];
           return (
             <g key={s.key}>
-              <path d={d} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+              <path d={d} pathLength={1} className="draw" fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
               {pts.map(([i, v]) => (
-                <circle key={i} cx={x(i)} cy={y(v)} r={hover === i ? 5 : pts.length > 40 ? 0 : 3} fill={s.color} stroke="var(--surface)" strokeWidth={2} />
+                <circle key={i} className="dot" cx={x(i)} cy={y(v)} r={hover === i ? 5 : pts.length > 40 ? 0 : 3} fill={s.color} stroke="var(--surface)" strokeWidth={2} />
               ))}
               {last && (
                 <>
@@ -169,7 +169,7 @@ export function ColumnChart({ data, color, unit, target, height = 200 }: { data:
           const left = cx(i) - bw / 2;
           // Rounded data-end, square at the baseline.
           const path = `M${left},${PAD.t + ih} V${top + r} Q${left},${top} ${left + r},${top} H${left + bw - r} Q${left + bw},${top} ${left + bw},${top + r} V${PAD.t + ih} Z`;
-          return <path key={d.date} d={path} fill={color} opacity={hover == null || hover === i ? 1 : 0.55} style={{ transition: 'opacity .15s' }} />;
+          return <path key={d.date} className="col" d={path} fill={color} opacity={hover == null || hover === i ? 1 : 0.55} style={{ transition: 'opacity .15s', animationDelay: `${i * 25}ms` }} />;
         })}
         {target != null && (
           <g>

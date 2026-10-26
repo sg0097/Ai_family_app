@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Num } from '../components/Num';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useSession } from '../App';
@@ -92,7 +93,7 @@ function ParentCard({ p, delay }: { p: FamilyMember; delay: number }) {
         </div>
         {consented && total > 0 && (
           <Ring value={done} total={total} size={60} stroke={7}>
-            <b style={{ fontSize: '0.95rem' }}>{done}/{total}</b>
+            <b style={{ fontSize: '0.95rem' }}><Num value={done} />/{total}</b>
           </Ring>
         )}
       </div>
@@ -150,6 +151,15 @@ function AlertNumber() {
         <label className="row" style={{ marginTop: 14, gap: 10, cursor: 'pointer' }}>
           <Switch on={user.whatsappAlerts} label="Send not-done alerts to WhatsApp" onChange={async (v) => setUser(await api<User>('/me', { method: 'PATCH', body: { whatsappAlerts: v } }))} />
           <span className="small">Also send “not done yet” alerts to WhatsApp <span className="muted">(HELP alerts always go)</span></span>
+        </label>
+      )}
+      {user?.phone && (
+        <label className="row" style={{ marginTop: 10, gap: 10, cursor: 'pointer' }}>
+          <Switch on={user.middaySummary} label="1 PM summary on WhatsApp" onChange={async (v) => {
+            setError('');
+            try { setUser(await api<User>('/me', { method: 'PATCH', body: { middaySummary: v } })); } catch (err) { setError((err as Error).message); }
+          }} />
+          <span className="small">A 1 PM note on how the day is going so far <span className="muted">(Family plan)</span></span>
         </label>
       )}
       {error && <p className="error" style={{ marginTop: 8 }}>{error}</p>}

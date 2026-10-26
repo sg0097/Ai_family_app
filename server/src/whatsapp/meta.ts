@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { env } from '../lib/env.js';
-import type { InboundMessage, SessionMessage, TemplateMessage, WhatsAppProvider } from './types.js';
+import type { AudioMessage, InboundMessage, SessionMessage, TemplateMessage, WhatsAppProvider } from './types.js';
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 
@@ -20,6 +20,20 @@ export class MetaWhatsApp implements WhatsAppProvider {
         }
       : { type: 'text', text: { body: msg.text } };
     return this.post({ messaging_product: 'whatsapp', to, ...body });
+  }
+
+  /** Upload the clip as media, then send it. Browsers that record WebM need it converted to OGG/Opus first. */
+  async sendAudio(to: string, audio: AudioMessage) {
+    const mime = audio.mime.split(';')[0];
+    if (mime === 'audio/webm') throw new Error('WhatsApp does not accept WebM audio; convert to audio/ogg (opus) before sending');
+    const form = new FormData();
+    form.append('messaging_product', 'whatsapp');
+    form.append('type', mime);
+    form.append('file', new Blob([new Uint8Array(audio.data)], { type: mime }), 'voice');
+    const res = await fetch(`${GRAPH}/${env.META_PHONE_NUMBER_ID}/media`, { method: 'POST', headers: { Authorization: `Bearer ${env.META_ACCESS_TOKEN}` }, body: form });
+    const json = (await res.json()) as { id?: string; error?: { message: string } };
+    if (!res.ok || !json.id) throw new Error(`WhatsApp media upload failed: ${json.error?.message ?? res.status}`);
+    return this.post({ messaging_product: 'whatsapp', to, type: 'audio', audio: { id: json.id } });
   }
 
   async sendTemplate(to: string, tpl: TemplateMessage) {

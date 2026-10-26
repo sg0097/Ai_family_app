@@ -71,7 +71,7 @@ export async function sendReminder(occurrenceId: string, parent: ParentProfile, 
     data: { status: 'SENT', sentAt: at, followUpAt: null, childAlertedAt: null },
   });
   if (claimed.count !== 1) return;
-  await enqueueOutbound({ parentId: parent.id, toPhone: parent.phone, occurrenceId, ...reminder(parent, routine, occurrenceId) });
+  await enqueueOutbound({ parentId: parent.id, toPhone: parent.phone, occurrenceId, voiceClipId: routine.voiceClipId ?? undefined, ...reminder(parent, routine, occurrenceId) });
 }
 
 /** One-tap nudge: (re)open today's occurrence for a routine and send its reminder immediately. */

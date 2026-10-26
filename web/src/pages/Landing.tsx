@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { Num } from '../components/Num';
 import { Link } from 'react-router-dom';
 import { useSession } from '../App';
 import { Icon } from '../components/Icon';
@@ -70,6 +71,7 @@ export function Landing() {
             <a href="#how">How it works</a>
             <a href="#features">Features</a>
             <a href="#safety">Safety</a>
+            <a href="#pricing">Pricing</a>
           </div>
           {user ? (
             <Link to="/app" className="btn">Open dashboard</Link>
@@ -88,8 +90,15 @@ export function Landing() {
             <div className="badge-new">
               <b>WhatsApp pe</b> No new app for your parents
             </div>
-            <h1>
-              Know how Maa’s day is going, <em>even from far away</em>
+            <h1 aria-label="Know how Maa’s day is going, even from far away">
+              {'Know how Maa’s day is going,'.split(' ').map((w, i) => (
+                <Fragment key={i}><span className="w" style={{ '--i': i } as React.CSSProperties} aria-hidden>{w}</span>{' '}</Fragment>
+              ))}
+              <em>
+                {'even from far away'.split(' ').map((w, i, a) => (
+                  <Fragment key={i}><span className="w" style={{ '--i': i + 6 } as React.CSSProperties} aria-hidden>{w}</span>{i < a.length - 1 ? ' ' : ''}</Fragment>
+                ))}
+              </em>
             </h1>
             <p className="lede">
               Your parents chat on WhatsApp the way they always do, in Hindi, Hinglish or English. We keep track of medicine, BP and how
@@ -103,7 +112,7 @@ export function Landing() {
           </div>
           <div className="hero-visual">
             <LiveChat />
-            <div className="float-card" style={{ left: -18, top: 70, transform: 'rotate(-3deg)' }}>
+            <div className="float-card" style={{ left: -18, top: 70, '--r': '-3deg' } as React.CSSProperties}>
               <div className="row">
                 <Ring value={4} total={5} size={58} stroke={7}>
                   <b style={{ fontSize: '0.95rem' }}>4/5</b>
@@ -114,13 +123,64 @@ export function Landing() {
                 </div>
               </div>
             </div>
-            <div className="float-card" style={{ right: -28, top: 170, transform: 'rotate(2.5deg)', maxWidth: 210 }}>
+            <div className="float-card" style={{ right: -28, top: 170, maxWidth: 210, '--r': '2.5deg', animationDelay: '-3s' } as React.CSSProperties}>
               <div className="tiny">From Mummy · 8:12 AM</div>
               <p className="note">“Haan beta, breakfast ke baad le li thi”</p>
             </div>
           </div>
         </div>
       </header>
+
+      <section className="section moment" aria-labelledby="moment-h">
+        <div className="section-head">
+          <div className="eyebrow">Why this exists</div>
+          <h2 id="moment-h">By the 9 PM call, <em>the day is already over</em></h2>
+          <p>You ask “dawai li?”, she says “haan”, and neither of you is sure. Family Care is there while the day can still change, in your voice.</p>
+        </div>
+        <ol className="day-line">
+          {[
+            ['8:00 AM', 'Your voice, not an alarm', 'She hears you say “Mummy, dawai le lo” before the reminder.', 'voice'],
+            ['8:12 AM', 'She replies her way', '“Haan beta, breakfast ke baad le li.” One tap or her own words.', 'quote'],
+            ['11:30 AM', 'A gentle second try', 'BP reading not sent yet, so one soft nudge. Never a nag.', ''],
+            ['1:00 PM', 'You know, at work', '“Mummy so far: 2 of 3 done.” A glance, not a worry.', ''],
+            ['9:00 PM', 'The call is about her', 'Not a checklist. Her knee, her serial, her day.', 'heart'],
+          ].map(([time, title, text, kind], i) => (
+            <li key={time} style={{ '--i': i } as React.CSSProperties} className={kind}>
+              <span className="dl-time">{time}</span>
+              <span className="dl-dot" aria-hidden />
+              <div className="dl-card">
+                <b>{title}</b>
+                <p>{text}</p>
+                {kind === 'voice' && (
+                  <span className="dl-voice" aria-hidden>
+                    <span className="vp-btn"><Icon name="play" size={11} /></span>
+                    <span className="dl-bars">{Array.from({ length: 22 }, (_, j) => <i key={j} style={{ height: `${30 + ((j * 37) % 70)}%` }} />)}</span>
+                    <span className="tiny">0:07</span>
+                  </span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="section facts" aria-label="Why it matters">
+        <div className="fact">
+          <b><CountUp value={149} /> million</b>
+          <p>Indians are 60 or older, and the number is set to more than double by 2050.</p>
+          <span className="tiny">UNFPA, India Ageing Report 2023</span>
+        </div>
+        <div className="fact">
+          <b>About <CountUp value={50} />%</b>
+          <p>of people on long-term medicines don’t take them as prescribed. A reminder they actually answer helps.</p>
+          <span className="tiny">WHO, Adherence to Long-Term Therapies</span>
+        </div>
+        <div className="fact">
+          <b>0 apps</b>
+          <p>for your parents to learn. If they can reply on WhatsApp, they’re already set up.</p>
+          <span className="tiny">Works on any phone with WhatsApp</span>
+        </div>
+      </section>
 
       <section className="section" id="how">
         <div className="section-head">
@@ -213,6 +273,26 @@ export function Landing() {
         </div>
       </section>
 
+      <section className="section" id="pricing" style={{ paddingTop: 0 }}>
+        <div className="section-head">
+          <div className="eyebrow">Pricing</div>
+          <h2>Everything that keeps them safe is free</h2>
+          <p>Every new account gets the Family plan free for 14 days.</p>
+        </div>
+        <div className="plans landing-plans">
+          <div className="plan-card">
+            <div className="plan-name">Free</div>
+            <div className="plan-price"><b>₹0</b></div>
+            <ul>{['Reminders and replies on WhatsApp', 'Alerts and HELP', 'Weekly report and doctor report', 'Medicines, refills and visits'].map((f) => <li key={f}><Icon name="check" size={14} /> {f}</li>)}</ul>
+          </div>
+          <div className="plan-card family">
+            <div className="plan-name">Family</div>
+            <div className="plan-price"><b>₹199</b><span className="tiny"> / month</span></div>
+            <ul>{['Reminders in your own voice', 'Check-ins with a voice note', 'Up to 4 parents, shared with siblings', 'The 1 PM WhatsApp summary'].map((f) => <li key={f}><Icon name="check" size={14} /> {f}</li>)}</ul>
+          </div>
+        </div>
+      </section>
+
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="cta-band">
           <h2>
@@ -229,6 +309,20 @@ export function Landing() {
       </footer>
     </div>
   );
+}
+
+/** Counts up once it scrolls into view, so the number moves where someone is looking. */
+function CountUp({ value }: { value: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return setSeen(true);
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && (setSeen(true), io.disconnect()), { threshold: 0.6 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return <span ref={ref}><Num value={seen ? value : 0} /></span>;
 }
 
 function Feature({ title, text, children, className = '' }: { title: string; text: string; children: React.ReactNode; className?: string }) {

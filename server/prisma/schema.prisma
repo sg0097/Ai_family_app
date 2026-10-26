@@ -26,6 +26,18 @@ model User {
   passwordResets PasswordReset[]
   // Bumped on password reset: sessions signed with an older version stop working.
   tokenVersion   Int             @default(0)
+  // A short 1 PM note on WhatsApp about how the parent's day is going so far.
+  middaySummary  Boolean         @default(false)
+  plan           Plan            @default(FREE)
+  planRenewsAt   DateTime? // end of the paid period; null while on the free plan
+  trialEndsAt    DateTime? // Family plan features are open until then
+  voiceClips     VoiceClip[]
+  checkIns       CheckIn[]
+}
+
+enum Plan {
+  FREE
+  FAMILY // ₹199 a month
 }
 
 // Siblings and other family members who share a parent's dashboard and alerts.
@@ -99,6 +111,9 @@ model ParentProfile {
   medicines       Medicine[]
   appointments    Appointment[]
   notes           CareNote[]
+  voiceClips      VoiceClip[]
+  checkIns        CheckIn[]
+  memories        Memory[]
 }
 
 enum Language {
@@ -190,6 +205,9 @@ model Routine {
   target            Int? // e.g. glasses of water per day
   medicineId        String?
   medicine          Medicine?           @relation(fields: [medicineId], references: [id], onDelete: SetNull)
+  // Played to the parent right after this reminder: the child's own voice.
+  voiceClipId       String?
+  voiceClip         VoiceClip?          @relation(fields: [voiceClipId], references: [id], onDelete: SetNull)
   // Care rules. null = off.
   followUpMinutes   Int?                @default(60) // one gentle follow-up to the parent
   alertAfterMinutes Int?                @default(180) // tell the child if still not done
@@ -248,6 +266,7 @@ model Message {
   waMessageId  String?        @unique // dedupe for webhook retries
   handledBy    String? // RULES | LLM | BUTTON | NONE
   occurrenceId String?
+  voiceClipId  String? // an audio message: which clip was sent
   createdAt    DateTime       @default(now())
   events       HealthEvent[]
 
@@ -323,4 +342,61 @@ model Notification {
   whatsappAt   DateTime?
 
   @@index([userId, createdAt])
+}
+
+// A short recording in the child's own voice, sent to the parent with reminders or on its own.
+// Kept in Postgres while clips are small (≤ 1 MB); object storage is the place once they grow.
+model VoiceClip {
+  id        String        @id @default(cuid())
+  parentId  String
+  parent    ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  label     String // "Good morning, Mummy"
+  mime      String
+  data      Bytes
+  seconds   Int
+  createdAt DateTime      @default(now())
+  routines  Routine[]
+  checkIns  CheckIn[]
+}
+
+// The child asking "how are you?" in the middle of the day, with one-tap answers.
+model CheckIn {
+  id          String        @id @default(cuid())
+  parentId    String
+  parent      ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  fromId      String
+  from        User          @relation(fields: [fromId], references: [id], onDelete: Cascade)
+  text        String
+  voiceClipId String?
+  voiceClip   VoiceClip?    @relation(fields: [voiceClipId], references: [id], onDelete: SetNull)
+  answer      String? // good | okay | low
+  answeredAt  DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@index([parentId, createdAt])
+}
+
+enum MemoryStatus {
+  SUGGESTED // noticed in the messages, waiting for the family to keep or dismiss
+  KEPT
+  DISMISSED // stays dismissed: the same pattern is never suggested again
+}
+
+// Something worth remembering about the parent, always with the messages it came from.
+// Found by deterministic workers over stored records; nothing here is a diagnosis.
+model Memory {
+  id        String        @id @default(cuid())
+  parentId  String
+  parent    ParentProfile @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  key       String // identifies the pattern, e.g. "symptom:knee pain"
+  kind      String // HEALTH | HABIT | PREFERENCE
+  text      String
+  evidence  Json // [{ at, quote }]
+  status    MemoryStatus  @default(SUGGESTED)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([parentId, key])
 }

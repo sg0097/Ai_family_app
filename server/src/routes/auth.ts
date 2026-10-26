@@ -1,3 +1,5 @@
+import type { User } from '@prisma/client';
+import { TRIAL_DAYS, planOf, requireFamily } from '../lib/plan.js';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
@@ -11,14 +13,14 @@ import { normalizePhone } from '../lib/phone.js';
 const timezone = z.string().max(64).refine((tz) => DateTime.local().setZone(tz).isValid, 'Unknown timezone');
 const signupBody = z.object({ name: z.string().trim().min(1).max(60), email: z.string().trim().toLowerCase().email(), password: z.string().min(8).max(200), timezone: timezone.optional() });
 const loginBody = z.object({ email: z.string().trim().toLowerCase(), password: z.string() });
-const meBody = z.object({ name: z.string().trim().min(1).max(60).optional(), phone: z.string().nullable().optional(), whatsappAlerts: z.boolean().optional(), timezone: timezone.optional() });
+const meBody = z.object({ name: z.string().trim().min(1).max(60).optional(), phone: z.string().nullable().optional(), whatsappAlerts: z.boolean().optional(), timezone: timezone.optional(), middaySummary: z.boolean().optional() });
 
 const RESET_TTL_MS = 60 * 60 * 1000;
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
 const DUMMY_HASH = '0000000000000000:' + '0'.repeat(128);
 
-const publicUser = (u: { id: string; name: string; email: string; phone: string | null; whatsappAlerts: boolean; timezone: string | null }) => ({ id: u.id, name: u.name, email: u.email, phone: u.phone, whatsappAlerts: u.whatsappAlerts, timezone: u.timezone });
+const publicUser = (u: User) => ({ id: u.id, name: u.name, email: u.email, phone: u.phone, whatsappAlerts: u.whatsappAlerts, middaySummary: u.middaySummary, timezone: u.timezone, plan: planOf(u) });
 
 export async function authRoutes(app: FastifyInstance) {
   const issue = (u: { id: string; tokenVersion: number }) => app.jwt.sign({ sub: u.id, v: u.tokenVersion }, { expiresIn: '30d' });
@@ -29,7 +31,7 @@ export async function authRoutes(app: FastifyInstance) {
   app.post('/auth/signup', limited, async (req, reply) => {
     const body = signupBody.parse(req.body);
     if (await prisma.user.findUnique({ where: { email: body.email } })) return reply.code(409).send({ error: 'An account with this email already exists' });
-    const user = await prisma.user.create({ data: { name: body.name, email: body.email, passwordHash: await hashPassword(body.password), timezone: body.timezone } });
+    const user = await prisma.user.create({ data: { name: body.name, email: body.email, passwordHash: await hashPassword(body.password), timezone: body.timezone, trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 86_400_000) } });
     return { token: issue(user), user: publicUser(user) };
   });
 
@@ -89,6 +91,7 @@ export async function authRoutes(app: FastifyInstance) {
     const body = meBody.parse(req.body);
     const phone = body.phone ? normalizePhone(body.phone) : body.phone;
     if (body.phone && !phone) return reply.code(400).send({ error: 'Enter a valid phone number' });
-    return publicUser(await prisma.user.update({ where: { id: req.user.sub }, data: { name: body.name, phone, whatsappAlerts: body.whatsappAlerts, timezone: body.timezone } }));
+    if (body.middaySummary) await requireFamily('midday', { userId: req.user.sub });
+    return publicUser(await prisma.user.update({ where: { id: req.user.sub }, data: { name: body.name, phone, whatsappAlerts: body.whatsappAlerts, middaySummary: body.middaySummary, timezone: body.timezone } }));
   });
 }

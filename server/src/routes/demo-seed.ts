@@ -197,5 +197,8 @@ export async function seedDemoParent(userId: string) {
       { parentId: parent.id, authorId: userId, text: 'Calls are best after 7 PM, after her serial.', createdAt: now.minus({ days: 9 }).toJSDate() },
     ],
   });
+  await prisma.checkIn.create({
+    data: { parentId: parent.id, fromId: userId, text: 'Mummy, kaisi ho? Khana kha liya?', answer: 'good', createdAt: now.minus({ days: 1 }).set({ hour: 14, minute: 5 }).toJSDate(), answeredAt: now.minus({ days: 1 }).set({ hour: 14, minute: 20 }).toJSDate() },
+  });
   return parent;
 }
