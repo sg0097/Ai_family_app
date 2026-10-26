@@ -1730,3 +1730,58 @@ h1 em, h2 em, .big-title em { background: none; color: var(--soft-ink); font-sty
 .sheet[class*='t-'] .spark-area { fill: var(--c); }
 .sheet[class*='t-'] .btn:not(.ghost) { background: var(--deep); }
 .sheet[class*='t-'] .sh-h .soft { color: var(--ink-c); }
+
+/* ── Dashboard: about 30% colour ─────────────────────────────────
+   White cards carry the layout; colour lives in icon chips, chart marks,
+   thin progress bars and soft tints. */
+.greet { background: #fff; border: 1px solid var(--line); padding: 22px 24px; }
+.greet.needs { background: linear-gradient(120deg, #fffaf0, #fff 60%); }
+.greet.help { background: linear-gradient(120deg, #fff1f1, #fff 60%); border-color: #ffd3d3; }
+.greet::after { display: none; }
+.greet h1 { font-size: clamp(1.5rem, 3vw, 2rem); }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 980px) { .kpis { grid-template-columns: 1fr 1fr; } }
+.kpi { background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; transition: transform 0.2s var(--ease), box-shadow 0.2s; }
+.kpi:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -22px var(--c); }
+.kpi-top { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; color: var(--muted); font-weight: 500; }
+.kpi-top .ichip { font-size: 30px; margin: 0; transform: none; }
+.kpi-val { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.04em; line-height: 1.1; margin-top: 4px; }
+.kpi-val small { font-size: 0.95rem; font-weight: 500; color: var(--soft-ink); letter-spacing: 0; margin-left: 2px; }
+.kpi-bar { height: 6px; border-radius: 6px; background: var(--tint); overflow: hidden; }
+.kpi-bar span { display: block; height: 100%; border-radius: 6px; background: var(--c); transform-origin: left; animation: grow-x 0.9s var(--ease) both; }
+.kpi-foot { font-size: 0.78rem; color: var(--muted); }
+.kpi-foot b.up { color: #15803d; } .kpi-foot b.down { color: var(--ink); }
+
+/* Tiles: tinted, never solid; the coloured chip and a green tick say "done" */
+.rtile[class*='t-'].done { background: var(--tint); color: var(--ink); box-shadow: none; }
+.rtile[class*='t-'].done .rtile-main .tiny { color: var(--ink-c); opacity: 0.85; }
+.rtile[class*='t-'].done .ichip { background: var(--c); box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.35); }
+.rtile[class*='t-'].done .pill { background: #fff; color: #15803d; }
+.rtile[class*='t-'].done .rtile-done { background: #15803d; color: #fff; }
+.rtile[class*='t-'] { background: #f7f7f6; }
+.rtile[class*='t-'].done { background: var(--tint); }
+.rtile[class*='t-'] .rtile-main .tiny { color: var(--muted); }
+.rtile[class*='t-'] .pill.muted-pill { background: #fff; color: var(--ink-2); }
+.daystrip { background: var(--panel); }
+.tl-track { opacity: 0.55; height: 6px; }
+
+/* Charts section */
+.insights-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 6px 2px 12px; }
+.insights-head h2 { font-size: 1.15rem; font-weight: 650; letter-spacing: -0.02em; }
+.insights-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; transition: opacity 0.2s; }
+.insights-grid > * { min-width: 0; }
+.insights-grid .wide { grid-column: 1 / -1; }
+@media (max-width: 860px) { .insights-grid { grid-template-columns: 1fr; } }
+.insights .chart-card { border-radius: 22px; }
+.feel-bar { display: flex; gap: 2px; height: 22px; border-radius: 8px; overflow: hidden; margin-top: 6px; }
+.feel-bar span { transform-origin: left; animation: grow-x 0.8s var(--ease) both; }
+.feel-legend { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 8px; }
+.feel-legend li { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; }
+.feel-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.feel-legend b { margin-left: auto; font-weight: 600; }
+.feel-days { display: grid; grid-template-columns: repeat(auto-fill, minmax(14px, 1fr)); gap: 3px; margin-top: 16px; }
+.feel-days span { aspect-ratio: 1; border-radius: 4px; background: #ececea; }
+.insights .heat .cell { aspect-ratio: auto; height: 26px; border-radius: 6px; }
+.insights .heat { gap: 5px; }
+@media (max-width: 640px) { .insights .heat .cell { height: 14px; border-radius: 3px; } .insights .heat { gap: 3px; } }

@@ -11,7 +11,7 @@ import { Skeleton, Toast } from '../../components/ui';
 import { DayStrip } from '../../components/today/DayStrip';
 import { DayTiles } from '../../components/today/DayTiles';
 import { DayTimeline } from '../../components/today/DayTimeline';
-import { ReadingCards } from '../../components/today/ReadingCards';
+import { Insights, Kpis } from '../../components/today/Insights';
 import { RoutineSheet } from '../../components/today/RoutineSheet';
 import { SayHi } from '../../components/today/SayHi';
 import { itemsFromSchedule, itemsFromToday, type DayItem } from '../../components/today/model';
@@ -100,8 +100,9 @@ export function TodayPage() {
   return (
     <div className="dash today">
       <StatusCard status={status} phone={p.phone} name={p.name} alertId={today.alerts[0]?.id} onAck={reload}
-        progress={{ done: today.routines.filter((r) => r.status === 'done').length, total: today.routines.filter((r) => r.status !== 'not_today').length }}
         sayHi={consented ? <SayHi parentId={id} parentName={p.name} onSent={() => setSentCheckIns((n) => n + 1)} /> : undefined} />
+
+      {hasReminders && <Kpis parentId={id} today={today} />}
 
       {!hasReminders ? (
         <SetupReminders name={p.name} onPick={(start) => setDialog({ start })} />
@@ -135,7 +136,7 @@ export function TodayPage() {
         </section>
       )}
 
-      {hasReminders && <ReadingCards parentId={id} today={today} />}
+      {hasReminders && <Insights parentId={id} today={today} />}
 
       <div className="dash-cols two">
         <FromParent extra={<RecentCheckIns parentId={id} parentName={p.name} version={sentCheckIns} />} />
