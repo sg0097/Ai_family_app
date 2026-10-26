@@ -1267,3 +1267,19 @@ h2, h3 { font-weight: 550; }
 .landing .section { padding: 72px 16px; }
 @media (max-width: 860px) { .landing .hero-inner { grid-template-columns: 1fr; } .board { justify-self: center; } }
 @media (prefers-reduced-motion: reduce) { .btile-state, .btile.is-done::after, .cta-band .cta-emoji { animation: none; } }
+
+/* ── Cream white ─────────────────────────────────────────────────
+   Warm off-white page, near-white cards, and very light tiles so the
+   whole screen reads white with just a hint of colour. */
+:root:not([data-theme='dark']) {
+  --page: #fbf9f4; --surface: #fffefb; --surface-2: #f5f2ea; --surface-3: #efebe1; --idle-soft: #f5f2ea;
+  --line: #eeeae0; --line-strong: #e2ddd1;
+  --tile-sage: #eef3ea; --tile-pink: #fbeff0; --tile-sun: #fcf5e0; --tile-sky: #eef2f8; --tile-lilac: #f3f0f8; --tile-sand: #f6f1e8;
+  --lime-soft: #f6f9e3; --ok-soft: #eff5ef; --coral-soft: #f1f4f1;
+  --hero-wash: var(--page);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']):not([data-theme='dark']) { --page: #111513; --surface: #181d1a; --surface-2: #1f2521; --line: #2a302c; --tile-sage: #1e2a22; --tile-pink: #2e2326; --tile-sun: #2e2a1c; --tile-sky: #1e2430; --tile-lilac: #26222f; --tile-sand: #2a261f; } }
+.nav-wrap { background: color-mix(in srgb, var(--page) 90%, transparent); }
+.board { border-color: var(--line); box-shadow: 0 24px 50px -30px rgba(60, 50, 30, 0.16); }
+.ftile, .btile, .fact { border: 1px solid color-mix(in srgb, var(--t, var(--line)) 60%, var(--line)); }
+.landing .cta-band { background: var(--tile-sun); }
