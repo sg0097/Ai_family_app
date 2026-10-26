@@ -212,7 +212,7 @@ export async function parentRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string }; Querystring: { days?: string } }>('/parents/:id/trends', async (req) => {
     await ownParent(req, req.params.id);
-    const days = [7, 30, 90].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
+    const days = [7, 14, 30, 90].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
     return trends(req.params.id, days);
   });
 
