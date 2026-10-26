@@ -33,7 +33,7 @@ export function ReadingCards({ parentId, today }: { parentId: string; today: Tod
       ),
     },
     {
-      key: 'mood', icon: 'smile', tone: 'black', label: 'Feeling', value: (() => { const last = [...(t?.wellbeing ?? [])].reverse().find((w) => w.level); return last?.level ? FEEL[last.level] : null; })(), at: null,
+      key: 'mood', icon: 'smile', tone: 'orange', label: 'Feeling', value: (() => { const last = [...(t?.wellbeing ?? [])].reverse().find((w) => w.level); return last?.level ? FEEL[last.level] : null; })(), at: null,
       body: (
         <div className="mood-row" aria-label="How she felt each day">
           {(t?.wellbeing ?? []).map((w) => <span key={w.date} className={`mood ${w.level ?? 'none'}`} title={`${fmtDate(w.date, { weekday: 'short', day: 'numeric' })}: ${w.level ? FEEL[w.level] : 'no check-in'}`} />)}
@@ -44,7 +44,7 @@ export function ReadingCards({ parentId, today }: { parentId: string; today: Tod
   return (
     <div className="rcards">
       {cards.map((c) => (
-        <Link key={c.key} to="history" className="rcard">
+        <Link key={c.key} to="history" className={`rcard t-${c.tone}`}>
           <div className="rcard-top">
             <span className={`ichip c-${c.tone}`} aria-hidden><Icon name={c.icon} stroke={2.4} /></span>
             <span className="tiny">{c.label}</span>

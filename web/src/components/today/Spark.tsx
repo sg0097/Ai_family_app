@@ -22,6 +22,7 @@ export function Spark({ points, label, height = 56 }: { points: { v: number; tip
           const r = e.currentTarget.getBoundingClientRect();
           setHot(Math.round(((e.clientX - r.left) / r.width) * (points.length - 1)));
         }}>
+        <path d={`${d} L${x(points.length - 1).toFixed(1)},${height} L${x(0).toFixed(1)},${height} Z`} className="spark-area" />
         <path d={d} pathLength={1} className="spark-line" />
         <line x1={x(shown)} x2={x(shown)} y1={0} y2={height} className="spark-guide" />
       </svg>

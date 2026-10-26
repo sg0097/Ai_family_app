@@ -42,7 +42,8 @@ export function RoutineSheet({ parentId, parentName, item, date, isToday, timeZo
     : null;
 
   return (
-    <Sheet title={cap(item.name)} onClose={onClose}>
+    <Sheet title={cap(item.name)} onClose={onClose} className={`t-${LOOK[item.type].tone}`}>
+      <div className="sh-band" aria-hidden />
       <div className="sh-head">
         <span className={`ichip c-${LOOK[item.type].tone}`} aria-hidden><Icon name={LOOK[item.type].icon} stroke={2.4} /></span>
         <div>

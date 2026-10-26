@@ -46,10 +46,13 @@ export function DayTimeline({ items, isToday, timeZone, hovered, onHover, onOpen
           <span key={h} className="tl-tick" style={{ left: at(h) }}>{fmtTime(`${String(h % 24).padStart(2, '0')}:00`).replace(':00', '')}</span>
         ))}
         {nowShown && <span className="tl-now" style={{ left: at(now) }}><b>Now</b></span>}
-        {items.map((i) => (
+        {items.map((i) => {
+          const pos = (hoursOf(i.time) - start) / (end - start);
+          const edge = pos > 0.8 ? ' tip-end' : pos < 0.15 ? ' tip-start' : '';
+          return (
           <button
             key={i.routineId}
-            className={`tl-dot ${i.status} c-${LOOK[i.type].tone}${hovered === i.routineId ? ' hot' : ''}`}
+            className={`tl-dot ${i.status} c-${LOOK[i.type].tone}${hovered === i.routineId ? ' hot' : ''}${edge}`}
             style={{ left: at(hoursOf(i.time)), '--lane': lane.get(i.routineId) ?? 0 } as React.CSSProperties}
             onMouseEnter={() => onHover(i.routineId)}
             onMouseLeave={() => onHover(null)}
@@ -61,7 +64,8 @@ export function DayTimeline({ items, isToday, timeZone, hovered, onHover, onOpen
             {i.status === 'done' ? <Icon name="check" size={12} stroke={3} /> : <Icon name={LOOK[i.type].icon} size={12} stroke={2.4} />}
             <span className="tl-tip">{cap(i.name)} · {fmtTime(i.time)}<br /><em>{STATUS_WORD[i.status]}</em></span>
           </button>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

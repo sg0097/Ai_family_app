@@ -22,7 +22,7 @@ export const LOOK: Record<RoutineType, { icon: IconName; tone: string }> = {
   SUGAR: { icon: 'drop', tone: 'amber' },
   WATER: { icon: 'glass', tone: 'blue' },
   WALK: { icon: 'walk', tone: 'green' },
-  WELLBEING: { icon: 'smile', tone: 'black' },
+  WELLBEING: { icon: 'smile', tone: 'orange' },
 };
 
 export const STATUS_WORD: Record<ScheduleStatus, string> = {

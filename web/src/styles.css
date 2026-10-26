@@ -1614,3 +1614,119 @@ h1 em, h2 em, .big-title em { background: none; color: var(--soft-ink); font-sty
 @keyframes spark-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 .spark-dot { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: #fff; border: 2px solid var(--ink); pointer-events: none; transition: left 0.08s, top 0.08s; }
 @media (min-width: 1100px) { .rtiles { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); } }
+
+/* ── Colour ───────────────────────────────────────────────────────
+   Each kind of reminder has one colour used everywhere: --c (bright, for
+   marks), --deep (solid fills with white text, AA), --tint (backgrounds),
+   --ink-c (text on tint, AA). */
+.t-pink   { --c: #ff4d6d; --deep: #e11d48; --deep2: #ff5c7a; --tint: #ffe8ed; --ink-c: #9f1239; }
+.t-violet { --c: #8b5cf6; --deep: #7c3aed; --deep2: #9b6bff; --tint: #efe9ff; --ink-c: #5b21b6; }
+.t-amber  { --c: #ffb020; --deep: #b45309; --deep2: #d97706; --tint: #fff3dc; --ink-c: #92400e; }
+.t-blue   { --c: #3d8bfd; --deep: #2563eb; --deep2: #4f8dff; --tint: #e5f0ff; --ink-c: #1d4ed8; }
+.t-green  { --c: #22c55e; --deep: #15803d; --deep2: #1fa34f; --tint: #e3f8ea; --ink-c: #166534; }
+.t-orange { --c: #ff7a45; --deep: #c2410c; --deep2: #ea6a2c; --tint: #ffeee6; --ink-c: #9a3412; }
+.ichip.c-orange { background: #ff7a45; }
+.tl-dot.c-orange { background: #ff7a45; }
+
+/* Greeting: a soft gradient card with a big progress ring */
+.greet { position: relative; overflow: hidden; padding: 26px 28px; border-radius: 30px; background: linear-gradient(120deg, #e9fbef 0%, #e6f0ff 55%, #f1e9ff 100%); gap: 24px; }
+.greet.needs { background: linear-gradient(120deg, #fff4dc 0%, #ffe9ef 55%, #efe9ff 100%); }
+.greet.help { background: linear-gradient(120deg, #ffe1e1 0%, #ffe9ef 60%, #fff4dc 100%); }
+.greet.paused { background: linear-gradient(120deg, #eef2f8 0%, #f1e9ff 100%); }
+.greet::after { content: ''; position: absolute; width: 320px; height: 320px; right: -80px; top: -160px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.75), transparent 70%); pointer-events: none; }
+.greet > * { position: relative; z-index: 1; }
+.greet-needs li { background: rgba(255, 255, 255, 0.8); }
+.greet .btn.ghost { background: rgba(255, 255, 255, 0.85); }
+.greet-ring { --p: 0; flex: none; width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center;
+  background: conic-gradient(from -90deg, #22c55e, #3d8bfd calc(var(--p) * 180deg), #8b5cf6 calc(var(--p) * 360deg), rgba(255, 255, 255, 0.7) 0);
+  transition: --p 1s var(--ease); animation: ring-in 1s var(--ease) both; }
+@keyframes ring-in { from { --p: 0; } }
+.greet-ring > span { width: 76px; height: 76px; border-radius: 50%; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.25); }
+.greet-ring b { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.04em; }
+.greet-ring i { font-style: normal; font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+@media (max-width: 640px) { .greet { padding: 20px; } .greet-ring { width: 76px; height: 76px; } .greet-ring > span { width: 60px; height: 60px; } .greet-ring b { font-size: 1.3rem; } }
+
+/* Tiles in colour: tinted when later, outlined when waiting, solid when done */
+.rtile[class*='t-'] { background: var(--tint); }
+.rtile[class*='t-'] .rtile-main .tiny { color: var(--ink-c); opacity: 0.85; }
+.rtile[class*='t-'] .pill.muted-pill { background: rgba(255, 255, 255, 0.7); color: var(--ink-c); }
+.rtile[class*='t-'].waiting, .rtile[class*='t-'].not_done { background: #fff; box-shadow: inset 0 0 0 2px var(--c), 0 10px 26px -16px var(--c); }
+.rtile[class*='t-'].waiting::after { content: ''; position: absolute; inset: 0; border-radius: 24px; box-shadow: 0 0 0 0 var(--c); animation: tile-pulse 2s infinite; pointer-events: none; }
+@keyframes tile-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 45%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+.rtile[class*='t-'].done { background: linear-gradient(150deg, var(--deep2), var(--deep)); color: #fff; box-shadow: 0 14px 30px -18px var(--deep); }
+.rtile[class*='t-'].done .rtile-main .tiny { color: rgba(255, 255, 255, 0.85); opacity: 1; }
+.rtile[class*='t-'].done .ichip { background: rgba(255, 255, 255, 0.22); box-shadow: none; }
+.rtile[class*='t-'].done .pill { background: rgba(255, 255, 255, 0.22); color: #fff; }
+.rtile[class*='t-'].done .rtile-done { background: #fff; color: var(--deep); }
+.rtile[class*='t-'].no_response { background: #fff; box-shadow: inset 0 0 0 1.5px dashed; border: 1.5px dashed color-mix(in srgb, var(--c) 55%, #ddd); }
+.rtile[class*='t-'].hot { box-shadow: 0 0 0 2px var(--c), 0 16px 34px -18px var(--c) !important; }
+.rtile.celebrate::before { border-color: var(--c, var(--ok)); }
+.rtile-state .link-btn { color: var(--ink-c, var(--ink)); font-weight: 600; }
+
+/* Timeline: the sky of her day, morning to night */
+.tl-track { height: 8px; background: linear-gradient(90deg, #ffd27a 0%, #ffe9a8 18%, #a8d4ff 42%, #7fb6ff 60%, #ffb38a 78%, #a78bfa 90%, #5b4bc4 100%); opacity: 0.9; }
+.tl-past { background: rgba(255, 255, 255, 0.55); left: auto; right: 0; width: auto !important; }
+.tl-dot { width: 28px; height: 28px; margin: calc(-14px - var(--lane) * 32px) 0 0 -14px; top: 4px; border-width: 3px; }
+.tl-dot.done { background: var(--ink) !important; }
+.tl-dot.done.c-pink { background: #e11d48 !important; } .tl-dot.done.c-violet { background: #7c3aed !important; } .tl-dot.done.c-amber { background: #d97706 !important; }
+.tl-dot.done.c-blue { background: #2563eb !important; } .tl-dot.done.c-green { background: #15803d !important; } .tl-dot.done.c-orange { background: #c2410c !important; }
+.tl-dot.waiting { box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.9); }
+
+/* Week strip in colour */
+.daystrip { background: linear-gradient(90deg, #f3f0ff, #eef6ff 50%, #ecfbf1); }
+.ds-ring { background: conic-gradient(#22c55e calc(var(--p) * 360deg), rgba(0, 0, 0, 0.08) 0); }
+.ds-day.today .ds-ring span { background: linear-gradient(135deg, #7c3aed, #2563eb); }
+.ds-day.on { box-shadow: 0 8px 22px -12px rgba(124, 58, 237, 0.5); }
+
+/* Reading cards in colour */
+.rcard[class*='t-'] { background: var(--tint); }
+.rcard[class*='t-']:hover { background: color-mix(in srgb, var(--tint) 80%, var(--c)); }
+.rcard[class*='t-'] .tiny { color: var(--ink-c); }
+.rcard[class*='t-'] .rcard-val .soft { color: var(--ink-c); opacity: 0.7; }
+.rcard[class*='t-'] .spark-line { stroke: var(--deep); stroke-width: 2.5; }
+.rcard[class*='t-'] .spark-dot { border-color: var(--deep); }
+.rcard[class*='t-'] .spark-tip { color: var(--ink-c); }
+.spark-area { fill: var(--c, #111); opacity: 0.16; }
+.mini-bars span { background: linear-gradient(180deg, #60a5fa, #2563eb); }
+.mini-bars span.none { background: rgba(0, 0, 0, 0.08); }
+.mood.none { background: rgba(0, 0, 0, 0.08); }
+
+/* Sheet gets a colour band */
+.sh-band { position: absolute; left: 0; right: 0; top: 0; height: 120px; background: linear-gradient(180deg, var(--tint), transparent); pointer-events: none; }
+.sheet > *:not(.sh-band):not(.sheet-close) { position: relative; }
+.hist-dot.done { background: #22c55e; }
+
+/* From Mummy: warm notes */
+.today .quotes li { background: #fff6dc; }
+.today .quotes li:nth-child(2) { background: #ffeef2; }
+.today .quotes li:nth-child(3) { background: #eef4ff; }
+.today .card { border-color: #eeeeee; }
+.today .ask { background: linear-gradient(120deg, #f3eeff, #eef5ff); border-color: transparent; }
+.today .ask-box { background: #fff; border-color: transparent; box-shadow: 0 6px 20px -14px rgba(124, 58, 237, 0.5); }
+.today .ask .chip { background: rgba(255, 255, 255, 0.8); border-color: transparent; }
+.today .ask .chip:hover { background: #7c3aed; color: #fff; }
+.today .ask-box .btn { background: #7c3aed; }
+.today .appt-date { background: linear-gradient(160deg, #ffe8ed, #ffd3dc); border: 0; color: #9f1239; }
+.today .notes li.pinned { background: #fff3dc; }
+.dash > *, .dash-cols > *, .board-card { min-width: 0; }
+@media (max-width: 640px) {
+  .board-card { padding: 12px; border-radius: 24px; }
+  .ds-day { flex: 0 0 64px; }
+  .tl { padding: 26px 6px 28px; }
+  .tl-tick:nth-child(odd) { display: none; }
+}
+.tl-tip { display: none; }
+.tl-dot:hover .tl-tip, .tl-dot.hot .tl-tip, .tl-dot:focus-visible .tl-tip { display: block; }
+.tl-dot.tip-end .tl-tip { left: auto; right: -6px; transform: none; }
+.tl-dot.tip-start .tl-tip { left: -6px; transform: none; }
+@media (max-width: 640px) {
+  .rtiles { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .rtile { min-height: 140px; padding: 13px; border-radius: 20px; }
+  .rtile-main b { font-size: 0.9rem; }
+  .ds-count { font-size: 0.6rem; }
+}
+.sheet[class*='t-'] .spark-line { stroke: var(--deep); stroke-width: 2.5; }
+.sheet[class*='t-'] .spark-dot { border-color: var(--deep); }
+.sheet[class*='t-'] .spark-area { fill: var(--c); }
+.sheet[class*='t-'] .btn:not(.ghost) { background: var(--deep); }
+.sheet[class*='t-'] .sh-h .soft { color: var(--ink-c); }

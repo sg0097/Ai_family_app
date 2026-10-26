@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api';
 import { RecentCheckIns } from '../../components/CheckIn';
 import { Ask } from '../../components/Ask';
+import { Num } from '../../components/Num';
 import { Icon, RoutineIcon } from '../../components/Icon';
 import { ReminderDialog, blankReminder, missingSuggestions } from '../../components/ReminderDialog';
 import { describeFrequency } from '../../components/RoutineForm';
@@ -99,6 +100,7 @@ export function TodayPage() {
   return (
     <div className="dash today">
       <StatusCard status={status} phone={p.phone} name={p.name} alertId={today.alerts[0]?.id} onAck={reload}
+        progress={{ done: today.routines.filter((r) => r.status === 'done').length, total: today.routines.filter((r) => r.status !== 'not_today').length }}
         sayHi={consented ? <SayHi parentId={id} parentName={p.name} onSent={() => setSentCheckIns((n) => n + 1)} /> : undefined} />
 
       {!hasReminders ? (
@@ -199,11 +201,16 @@ export function TodayPage() {
 }
 
 /** The plain-words answer to "how is she today?", with the two things you might do about it. */
-function StatusCard({ status, phone, name, alertId, onAck, sayHi }: { status: ReturnType<typeof dayStatus>; phone: string; name: string; alertId?: string; onAck: () => void; sayHi?: React.ReactNode }) {
+function StatusCard({ status, phone, name, alertId, onAck, sayHi, progress }: { status: ReturnType<typeof dayStatus>; phone: string; name: string; alertId?: string; onAck: () => void; sayHi?: React.ReactNode; progress?: { done: number; total: number } }) {
   const urgent = status.tone === 'help' || status.tone === 'needs';
   return (
     <section className={`greet ${status.tone}`} aria-live="polite">
-      <div style={{ minWidth: 0 }}>
+      {progress && progress.total > 0 && (
+        <div className="greet-ring" style={{ '--p': progress.done / progress.total } as React.CSSProperties} aria-label={`${progress.done} of ${progress.total} done today`}>
+          <span><b><Num value={progress.done} /></b><i>of {progress.total}</i></span>
+        </div>
+      )}
+      <div style={{ minWidth: 0, flex: 1 }}>
         <h1>{status.title}</h1>
         <p className="greet-detail">{status.detail}</p>
         {status.needs.length > 0 && <ul className="greet-needs">{status.needs.map((n) => <li key={n}><i className="dot a" /> {n}</li>)}</ul>}

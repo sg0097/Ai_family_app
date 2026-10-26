@@ -25,7 +25,7 @@ export function DayTiles({ items, timeZone, hovered, onHover, onOpen, justDone, 
         return (
           <div
             key={i.routineId}
-            className={`rtile ${i.status}${hovered === i.routineId ? ' hot' : ''}${justDone.has(i.routineId) ? ' celebrate' : ''}`}
+            className={`rtile t-${LOOK[i.type].tone} ${i.status}${hovered === i.routineId ? ' hot' : ''}${justDone.has(i.routineId) ? ' celebrate' : ''}`}
             style={{ '--n': n } as React.CSSProperties}
             onMouseEnter={() => onHover(i.routineId)}
             onMouseLeave={() => onHover(null)}
