@@ -95,33 +95,10 @@ export function App() {
   );
 }
 
-type Theme = 'system' | 'light' | 'dark';
-function useTheme() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    try {
-      // Light by default; dark (or following the system) is a choice in the menu.
-      return (localStorage.getItem('afc_theme') as Theme) || 'light';
-    } catch {
-      return 'light';
-    }
-  });
-  useEffect(() => {
-    if (theme === 'system') document.documentElement.removeAttribute('data-theme');
-    else document.documentElement.setAttribute('data-theme', theme);
-    try {
-      localStorage.setItem('afc_theme', theme);
-    } catch {
-      /* preference just won't persist */
-    }
-  }, [theme]);
-  return [theme, setTheme] as const;
-}
-
 function AppShell({ children }: { children: React.ReactNode }) {
   const { user, family, signOut } = useSession();
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [theme, setTheme] = useTheme();
   const loc = useLocation();
   useEffect(() => setOpen(false), [loc.pathname]);
 
@@ -156,14 +133,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   <Link to="/app/plan" role="menuitem" onClick={() => setOpen(false)}>
                     Plan · {user?.plan.plan === 'FAMILY' ? 'Family' : user?.plan.trialDaysLeft ? `trial, ${user.plan.trialDaysLeft} days left` : 'Free'}
                   </Link>
-                  <div style={{ padding: '6px 12px' }}>
-                    <div className="tiny" style={{ marginBottom: 6 }}>Theme</div>
-                    <div className="segmented">
-                      {(['system', 'light', 'dark'] as Theme[]).map((t) => (
-                        <button key={t} className={theme === t ? 'on' : ''} onClick={() => setTheme(t)}>{t[0].toUpperCase() + t.slice(1)}</button>
-                      ))}
-                    </div>
-                  </div>
                   <button role="menuitem" onClick={signOut}>Sign out</button>
                   <button role="menuitem" style={{ color: 'var(--critical)' }} onClick={() => { setOpen(false); setDeleting(true); }}>Delete my account…</button>
                 </div>

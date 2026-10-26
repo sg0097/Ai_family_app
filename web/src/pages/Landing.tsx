@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Num } from '../components/Num';
 import { Link } from 'react-router-dom';
 import { useSession } from '../App';
-import { Icon } from '../components/Icon';
+import { Icon, type IconName } from '../components/Icon';
 import { Logo } from '../components/ui';
 
 const SCRIPT: { who: 'them' | 'me'; text: string; buttons?: string[] }[] = [
@@ -100,145 +100,255 @@ function TileBoard() {
   );
 }
 
-const STEPS = [
-  { emoji: '📱', title: 'Add Maa', text: 'Her name and WhatsApp number.', tone: 'sky' },
-  { emoji: '👍', title: 'She says “Haan”', text: 'One message. Nothing starts without her yes.', tone: 'sun' },
-  { emoji: '😌', title: 'You relax', text: 'See her day here, any time.', tone: 'sage' },
+type Tone = 'pink' | 'green' | 'blue' | 'amber' | 'violet' | 'black';
+
+/** A small coloured app-icon tile that sits inside a headline. */
+function Chip({ icon, tone }: { icon: IconName; tone: Tone }) {
+  return <span className={`ichip c-${tone}`} aria-hidden><Icon name={icon} stroke={2.4} /></span>;
+}
+
+const ROTOR: { icon: IconName; tone: Tone; text: string }[] = [
+  { icon: 'pill', tone: 'pink', text: 'medicine' },
+  { icon: 'heart', tone: 'blue', text: 'BP' },
+  { icon: 'smile', tone: 'amber', text: 'mood' },
+  { icon: 'walk', tone: 'green', text: 'walk' },
 ];
 
-const LOVES = [
-  { emoji: '🎙️', title: 'Your voice', text: '“Mummy, dawai le lo” in your own voice.', tone: 'pink' },
-  { emoji: '💊', title: 'Medicine', text: 'Reminders she actually answers.', tone: 'sage' },
-  { emoji: '🩺', title: 'BP & sugar', text: 'Every reading, saved for the doctor.', tone: 'sky' },
-  { emoji: '🆘', title: 'HELP button', text: 'She types HELP, you know at once.', tone: 'sun' },
-  { emoji: '👨‍👩‍👧', title: 'Whole family', text: 'Brothers and sisters see it too.', tone: 'lilac' },
-  { emoji: '🗣️', title: 'Her language', text: 'Hindi, Hinglish or English.', tone: 'sand' },
-];
+function Rotor() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setI((v) => (v + 1) % ROTOR.length), 2000);
+    return () => clearInterval(t);
+  }, []);
+  const r = ROTOR[i];
+  return (
+    <span className="st-rotor">
+      <span key={i}><Chip icon={r.icon} tone={r.tone} /> {r.text}</span>
+    </span>
+  );
+}
+
+const WAYS = {
+  tap: { label: 'Tap', hint: 'one touch', text: 'She taps ✅ Le li under the reminder. Done.', chat: [['them', 'Mummy, morning wali dawa le li? ❤️'], ['me', '✅ Le li'], ['them', 'Shabash! ❤️']] },
+  type: { label: 'Type', hint: 'her words', text: 'She writes it her way. We understand it.', chat: [['them', 'Mummy, aaj BP check kiya?'], ['me', 'Haan, 130/80 tha'], ['them', 'BP 130/80 note kar liya ❤️']] },
+  help: { label: 'HELP', hint: 'any time', text: 'She sends HELP. You get an alert at once.', chat: [['me', 'HELP'], ['them', 'Maine Priya ko abhi bata diya hai 🙏 Turant madad chahiye to 112 par call kariye.']] },
+} as const;
+
+/** A small phone showing one exchange for the chosen way of replying. */
+function WayChat({ way }: { way: keyof typeof WAYS }) {
+  return (
+    <div className="phone-mock" style={{ animation: 'none' }} aria-label="Example chat">
+      <div className="phone-screen" style={{ height: 360 }}>
+        <div className="phone-top"><span className="av">❤️</span><b>Family Care</b></div>
+        <div className="phone-body" style={{ justifyContent: 'flex-end' }}>
+          {WAYS[way].chat.map(([who, text], i) => (
+            <div key={`${way}-${i}`} className={`wa ${who}`} style={{ animationDelay: `${i * 0.35}s` }}>{text}</div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const FAQ = [
+  ['Does Maa need to install anything?', 'No. If she can reply on WhatsApp, she’s set. There is no app for her.'],
+  ['What if she doesn’t reply?', 'She gets one gentle reminder later. If it’s still not done, we tell you. No reply is shown as “no reply”, never as a missed dose.'],
+  ['Is this a medical service?', 'No. We never diagnose and never change medicines. Readings are shown exactly as she sent them. In an emergency, call 112.'],
+  ['Which languages?', 'Hinglish, Hindi and English. You pick for each parent.'],
+  ['Who sees her messages?', 'Only you and the family members you invite.'],
+  ['Can she stop it?', 'Yes. She replies STOP any time and everything stops.'],
+] as const;
 
 export function Landing() {
   const { user } = useSession();
   const start = user ? '/app' : '/signup';
+  const [way, setWay] = useState<keyof typeof WAYS>('tap');
+  const [open, setOpen] = useState(0);
   return (
-    <div className="landing">
+    <div className="studio">
       <div className="nav-wrap">
         <nav className="nav">
           <Logo />
           <div className="links">
-            <a href="#how">How it works</a>
-            <a href="#love">Features</a>
+            <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
+            <a href="#faq">FAQ</a>
           </div>
           {user ? (
-            <Link to="/app" className="btn">Open dashboard</Link>
+            <Link to="/app" className="btn sm">Open dashboard</Link>
           ) : (
             <div className="row" style={{ gap: 6 }}>
-              <Link to="/login" className="btn quiet">Log in</Link>
-              <Link to="/signup" className="btn">Get started</Link>
+              <Link to="/login" className="btn ghost sm">Log in</Link>
+              <Link to="/signup" className="btn sm">Start free</Link>
             </div>
           )}
         </nav>
       </div>
 
-      <header className="hero">
-        <div className="hero-inner">
-          <div>
-            <span className="hello-chip">💚 Sab WhatsApp pe</span>
-            <h1>Maa ka din,<br /><em>aapke phone pe.</em></h1>
-            <p className="lede">Medicine, BP, how she feels. Know she’s okay without calling five times.</p>
-            <div className="row wrap">
-              <Link to={start} className="btn lg">Start free</Link>
-              <a href="#how" className="btn ghost lg">How it works ↓</a>
-            </div>
-            <p className="tiny" style={{ marginTop: 16 }}>No app for her to learn. Just WhatsApp.</p>
-          </div>
-          <TileBoard />
-        </div>
+      <header className="st-hero">
+        <h1 className="st-h1">
+          Know Maa’s<br />
+          <Rotor /><br />
+          <span className="st-grey">is taken care of.</span>
+        </h1>
+        <p className="st-lede">Reminders go to her on WhatsApp, in her language. You see her day here, without calling five times.</p>
+        <Link to={start} className="btn lg">Start free</Link>
+        <p className="st-note">Free to start. Nothing for her to install.</p>
       </header>
 
-      <section className="section" id="how">
-        <h2 className="big-title">3 simple steps</h2>
-        <div className="tile-row">
-          {STEPS.map((s, i) => (
-            <div key={s.title} className={`ftile ${s.tone}`}>
-              <span className="ftile-n">{i + 1}</span>
-              <span className="ftile-emoji" aria-hidden>{s.emoji}</span>
-              <b>{s.title}</b>
-              <p>{s.text}</p>
-            </div>
-          ))}
+      <div className="st-stage">
+        <div className="st-stage-inner">
+          <TileBoard />
+          <LiveChat />
         </div>
-      </section>
-
-      <section className="section chat-show">
-        <div>
-          <h2 className="big-title left">She just chats.<br />Like always.</h2>
-          <div className="say-chips">
-            <span>Taps <b>✅ Le li</b></span>
-            <span>Types <b>“BP 130/80”</b></span>
-            <span>Says <b>“pair mein dard hai”</b></span>
-            <span>Sends <b>HELP 🆘</b></span>
-          </div>
-          <p className="muted" style={{ marginTop: 18 }}>We understand all of it, and you see it neatly.</p>
-        </div>
-        <LiveChat />
-      </section>
-
-      <section className="section" id="love">
-        <h2 className="big-title">Things you’ll love</h2>
-        <div className="tile-grid">
-          {LOVES.map((f) => (
-            <div key={f.title} className={`ftile ${f.tone}`}>
-              <span className="ftile-emoji" aria-hidden>{f.emoji}</span>
-              <b>{f.title}</b>
-              <p>{f.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      </div>
 
       <section className="section">
-        <div className="tile-row facts">
-          <div className="fact"><b><CountUp value={149} /> million</b><p>Indians are 60+</p><span className="tiny">UNFPA, India Ageing Report 2023</span></div>
-          <div className="fact"><b>1 in <CountUp value={2} /></b><p>don’t take long-term medicines as prescribed</p><span className="tiny">WHO</span></div>
-          <div className="fact"><b><CountUp value={0} /> apps</b><p>for her to learn</p><span className="tiny">Just WhatsApp</span></div>
-        </div>
-        <div className="trust-chips">
-          <span>🩺 Never diagnoses</span>
-          <span>🙋‍♀️ She says yes first</span>
-          <span>✋ STOP anytime</span>
-          <span>🔒 Her data, your family only</span>
-        </div>
-      </section>
-
-      <section className="section" id="pricing">
-        <h2 className="big-title">Free to start</h2>
-        <div className="plans landing-plans">
-          <div className="plan-card">
-            <div className="plan-name">Free</div>
-            <div className="plan-price"><b>₹0</b></div>
-            <ul>{['Reminders on WhatsApp', 'Alerts and HELP', 'Weekly and doctor report'].map((f) => <li key={f}><Icon name="check" size={14} /> {f}</li>)}</ul>
+        <div className="st-split">
+          <div>
+            <span className="st-eyebrow">For her</span>
+            <h2 className="st-h2">She just <Chip icon="message" tone="green" /> chats. <span className="st-grey">Like always.</span></h2>
+            <p className="st-lede">No new app, no passwords. Reminders arrive in her WhatsApp, and she answers however she likes.</p>
+            <div className="seg" role="tablist" aria-label="How she replies">
+              {(Object.keys(WAYS) as (keyof typeof WAYS)[]).map((k) => (
+                <button key={k} role="tab" aria-selected={way === k} className={way === k ? 'on' : ''} onClick={() => setWay(k)}>
+                  {WAYS[k].label}<span>{WAYS[k].hint}</span>
+                </button>
+              ))}
+            </div>
+            <p className="st-mono" style={{ marginTop: 16 }}>{WAYS[way].text}</p>
           </div>
-          <div className="plan-card family">
-            <div className="plan-name">Family</div>
-            <div className="plan-price"><b>₹199</b><span className="tiny"> / month</span></div>
-            <ul>{['Your voice in reminders', 'Up to 4 parents', 'Brothers and sisters too'].map((f) => <li key={f}><Icon name="check" size={14} /> {f}</li>)}</ul>
+          <div className="st-panel"><WayChat way={way} /></div>
+        </div>
+      </section>
+
+      <section className="section" id="features" style={{ paddingTop: 0 }}>
+        <div className="st-center">
+          <span className="st-eyebrow">Everything in one place</span>
+          <h2 className="st-h2">A whole <Chip icon="heart" tone="pink" /> care team. <span className="st-grey">One <Chip icon="message" tone="black" /> chat.</span></h2>
+        </div>
+        <div className="bento4">
+          <div className="bx w2">
+            <h3>Reminders in your voice.</h3>
+            <p>Record “Mummy, dawai le lo” once. She hears you, not an alarm.</p>
+            <div className="grow"><div className="wave-bars" aria-hidden>{Array.from({ length: 16 }, (_, i) => <i key={i} style={{ height: `${25 + ((i * 41) % 75)}%` }} />)}</div></div>
+            <div className="pill-row"><span className="on"><Icon name="play" size={12} /> 0:07</span><span>Good morning, Mummy</span></div>
+          </div>
+          <div className="bx">
+            <div className="huge"><CountUp value={3} /></div>
+            <div className="grow" />
+            <h3>languages</h3>
+            <p>Hinglish, Hindi, English.</p>
+          </div>
+          <div className="bx dark">
+            <div className="icon-sq"><Icon name="alert" size={24} /></div>
+            <div className="grow" />
+            <h3>One word: HELP</h3>
+            <p>She sends it, you know at once.</p>
+          </div>
+          <div className="bx">
+            <div className="icon-sq"><Icon name="pill" size={24} /></div>
+            <div className="grow" />
+            <h3>Medicines</h3>
+            <p>Reminders, and a nudge before tablets run out.</p>
+          </div>
+          <div className="bx">
+            <div className="icon-sq"><Icon name="report" size={24} /></div>
+            <div className="grow" />
+            <h3>Doctor report</h3>
+            <p>Every BP and sugar reading on one page.</p>
+          </div>
+          <div className="bx w2">
+            <h3>Know how she is. At a glance.</h3>
+            <p>One look tells you what’s done and what’s waiting.</p>
+            <div className="grow" />
+            <div className="pill-row">
+              <span className="on"><i className="dot g" /> Medicine done</span>
+              <span><i className="dot a" /> BP waiting</span>
+              <span><i className="dot g" /> Feeling good</span>
+              <span><i className="dot r" /> HELP</span>
+            </div>
+          </div>
+          <div className="bx">
+            <div className="huge"><CountUp value={149} />M</div>
+            <div className="grow" />
+            <h3>Indians are 60+</h3>
+            <p>UNFPA, India Ageing Report 2023</p>
+          </div>
+          <div className="bx">
+            <div className="huge">1 in <CountUp value={2} /></div>
+            <div className="grow" />
+            <h3>skip long-term medicines</h3>
+            <p>Most people don’t take them as prescribed. WHO</p>
+          </div>
+          <div className="bx w2">
+            <div className="icon-sq"><Icon name="message" size={24} /></div>
+            <div className="grow" />
+            <h3>Brothers and sisters, together.</h3>
+            <p>Everyone sees the same day and gets the same alerts.</p>
+          </div>
+          <div className="bx bx-wide-row">
+            <div className="icon-sq"><Icon name="info" size={22} /></div>
+            <div>
+              <h3 style={{ fontSize: '1.1rem' }}>A care companion, not a doctor.</h3>
+              <p>We never diagnose or change medicines. She says yes first, and STOP always works.</p>
+            </div>
           </div>
         </div>
-        <p className="tiny" style={{ textAlign: 'center', marginTop: 12 }}>Family is free for your first 14 days.</p>
       </section>
 
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="cta-band">
-          <span className="cta-emoji" aria-hidden>🤗</span>
-          <h2>Be there, <em>even when you’re not.</em></h2>
-          <Link to={start} className="btn lg">Start free</Link>
+      <section className="section" id="pricing" style={{ paddingTop: 0 }}>
+        <div className="st-center">
+          <h2 className="st-h2">Start <Chip icon="check" tone="green" /> free.<br /><span className="st-grey"><Chip icon="calendar" tone="black" /> 14 days of Family on us.</span></h2>
+          <p className="st-lede">Everything that keeps her safe is free, always.</p>
+        </div>
+        <div className="st-plans">
+          <div className="st-plan">
+            <h3>Free</h3>
+            <div className="who">For one parent.</div>
+            <div className="price">₹0<small>forever</small></div>
+            <Link to={start} className="btn">Start free</Link>
+            <ul>{['WhatsApp reminders', 'Alerts and HELP', 'Weekly and doctor report', 'Medicines and refills'].map((f) => <li key={f}><Icon name="check" size={15} /> {f}</li>)}</ul>
+          </div>
+          <div className="st-plan">
+            <h3>Family</h3>
+            <div className="who">For the whole family.</div>
+            <div className="price">₹199<small>a month</small></div>
+            <Link to={start} className="btn">Try free for 14 days</Link>
+            <ul>{['Everything in Free', 'Reminders in your voice', 'Up to 4 parents', 'Brothers and sisters too'].map((f) => <li key={f}><Icon name="check" size={15} /> {f}</li>)}</ul>
+          </div>
         </div>
       </section>
 
-      <footer className="footer">
+      <section className="section" id="faq" style={{ paddingTop: 0 }}>
+        <div className="faq">
+          <div>
+            <h2 className="st-h2">Questions.</h2>
+            <p className="st-lede" style={{ marginTop: 16 }}>What families ask before they start.</p>
+          </div>
+          <div className="faq-list">
+            {FAQ.map(([q, a], i) => (
+              <div key={q} className={`faq-item${open === i ? ' open' : ''}`}>
+                <button aria-expanded={open === i} onClick={() => setOpen(open === i ? -1 : i)}>
+                  <span className="n">{String(i + 1).padStart(2, '0')}</span>{q}<span className="x"><Icon name="plus" size={14} /></span>
+                </button>
+                {open === i && <p>{a}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="st-final">
+        <h2 className="st-h2">Be there <Chip icon="heart" tone="pink" /><br /><span className="st-grey">even when you’re not.</span></h2>
+        <Link to={start} className="btn lg">Start free</Link>
+      </section>
+
+      <footer className="st-foot">
         <Logo />
         <span>Not a medical service. In an emergency, call 112.</span>
       </footer>
+      <div className="st-word" aria-hidden>ghar ki khabar</div>
     </div>
   );
 }

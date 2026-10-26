@@ -5,16 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Family Care · ghar ki khabar</title>
     <meta name="description" content="Your parents chat on WhatsApp; you see how their day is going." />
-    <meta name="theme-color" content="#f7f2e8" />
+    <meta name="theme-color" content="#ffffff" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <script>
-      // Apply the theme before the first paint: light unless the person chose dark or "system".
-      try {
-        var t = localStorage.getItem('afc_theme') || 'light';
-        if (t !== 'system') document.documentElement.setAttribute('data-theme', t);
-      } catch (e) {
-        document.documentElement.setAttribute('data-theme', 'light');
-      }
+      // One light look for everyone; clear any dark choice saved by older versions.
+      document.documentElement.setAttribute('data-theme', 'light');
+      try { localStorage.removeItem('afc_theme'); } catch (e) {}
     </script>
   </head>
   <body>
