@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
-import { Skeleton } from '../../components/ui';
+import { PlanNote, Skeleton } from '../../components/ui';
 import { fmtClock, fmtDate } from '../../format';
 import { useApi } from '../../hooks';
 import type { DoctorReport, Stats } from '../../types';
@@ -24,7 +24,7 @@ export function DoctorReportPage() {
   const { id, today } = useParent();
   const tz = today.parent.timezone;
   const [days, setDays] = useState('30');
-  const { data, loading } = useApi<DoctorReport>(`/parents/${id}/doctor-report?from=${isoDaysAgo(Number(days))}`);
+  const { data, loading, error } = useApi<DoctorReport>(`/parents/${id}/doctor-report?from=${isoDaysAgo(Number(days))}`);
   const when = (iso: string) => `${fmtDate(iso, { day: 'numeric', month: 'short' }, tz)}, ${fmtClock(iso, tz)}`;
   const stat = (s: Stats | null) => (s ? `${s.min}–${s.max} (average ${s.avg})` : '—');
 
@@ -42,7 +42,7 @@ export function DoctorReportPage() {
         </div>
       </div>
 
-      {!data ? <Skeleton h={500} /> : (
+      {error && !data ? <PlanNote text={error} /> : !data ? <Skeleton h={500} /> : (
         <article className="card pad-lg doc" style={{ opacity: loading ? 0.7 : 1 }}>
           <header className="doc-head">
             <div>

@@ -79,7 +79,7 @@ Examples:
 "Kal se pair mein thoda dard hai" ->{"items":[{"kind":"symptom","name":"leg pain","since":"since yesterday"}]}
 "Dawa le li par walk nahi hui, ghutne mein dard tha" -> {"items":[{"kind":"confirm","done":true,"routine":"MEDICINE"},{"kind":"confirm","done":false,"routine":"WALK"},{"kind":"symptom","name":"knee pain","since":null}]}`;
 
-export const llmEnabled = () => Boolean(env.OLLAMA_URL);
+export const llmEnabled = () => env.LABS === 'on' && Boolean(env.OLLAMA_URL);
 
 /** Returns validated findings, or null if the model is unavailable or answered nonsense. */
 export async function understandWithLlm(text: string, pending: { type: RoutineType; name: string }[]): Promise<Finding[] | null> {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChartCard, ColumnChart, Heatmap, LineChart } from '../../components/charts';
-import { Skeleton } from '../../components/ui';
+import { PlanNote, Skeleton } from '../../components/ui';
 import { RoutineIcon } from '../../components/Icon';
 import { fmtDate } from '../../format';
 import { useApi } from '../../hooks';
@@ -23,21 +23,22 @@ const FEEL: Record<string, { cls: string; text: string }> = {
 
 export function TrendsTab() {
   const { id, today } = useParent();
-  const [days, setDays] = useState(30);
-  const { data, loading } = useApi<Trends>(`/parents/${id}/trends?days=${days}`);
+  const [days, setDays] = useState(14);
+  const { data, loading, error } = useApi<Trends>(`/parents/${id}/trends?days=${days}`);
   const name = today.parent.name;
 
   return (
     <div className="stack">
       <div className="spread wrap">
         <div className="segmented" role="group" aria-label="Date range">
-          {[7, 30, 90].map((d) => (
+          {[7, 14, 30, 90].map((d) => (
             <button key={d} className={days === d ? 'on' : ''} onClick={() => setDays(d)}>Last {d} days</button>
           ))}
         </div>
         {data && <span className="tiny">{fmtDate(data.range.from)} – {fmtDate(data.range.to)} · heard from {name} on {data.stats.daysHeardFrom} of {days} days</span>}
       </div>
 
+      {error && <PlanNote text={error} />}
       {!data ? (
         <><Skeleton h={300} /><Skeleton h={260} /></>
       ) : (

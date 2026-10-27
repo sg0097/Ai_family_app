@@ -168,7 +168,7 @@ export function OnboardingPage() {
                     </div>
                   )}
                 </div>
-                <Switch on={p.on} label={`Track ${ROUTINE_LABEL[p.type]}`} onChange={(on) => { update(i, { on }); setFocus(p.type); }} />
+                <Switch on={p.on} label={`Remind about ${ROUTINE_LABEL[p.type].toLowerCase()}`} onChange={(on) => { update(i, { on }); setFocus(p.type); }} />
               </div>
             ))}
           </>

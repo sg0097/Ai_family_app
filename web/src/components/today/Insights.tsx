@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChartCard, ColumnChart, Heatmap, LineChart } from '../charts';
 import { Icon, RoutineIcon, type IconName } from '../Icon';
 import { Num } from '../Num';
-import { Skeleton } from '../ui';
+import { PlanNote, Skeleton } from '../ui';
 import { fmtDate } from '../../format';
 import { useApi } from '../../hooks';
 import type { DayStatus, Today, Trends } from '../../types';
@@ -61,7 +61,7 @@ function Delta({ now, before, unit }: { now: number; before: number; unit: strin
 /** The charts: one range control for all of them, each with hover and a table view. */
 export function Insights({ parentId, today }: { parentId: string; today: Today }) {
   const [days, setDays] = useState(14);
-  const { data, loading } = useApi<Trends>(`/parents/${parentId}/trends?days=${days}`, 60_000);
+  const { data, loading, error } = useApi<Trends>(`/parents/${parentId}/trends?days=${days}`, 60_000);
   const tz = today.parent.timezone;
   const day = (iso: string) => fmtDate(iso, { weekday: 'short', day: 'numeric', month: 'short' }, tz);
   const feel = data ? FEEL.map((f) => ({ ...f, n: data.wellbeing.filter((w) => w.level === f.key).length })) : [];
@@ -75,6 +75,7 @@ export function Insights({ parentId, today }: { parentId: string; today: Today }
           {[7, 14, 30].map((d) => <button key={d} className={days === d ? 'on' : ''} onClick={() => setDays(d)}>{d} days</button>)}
         </div>
       </div>
+      {error && <PlanNote text={error} />}
       {!data ? <Skeleton h={320} /> : (
         <div className="insights-grid" style={{ opacity: loading ? 0.6 : 1 }}>
           <ChartCard

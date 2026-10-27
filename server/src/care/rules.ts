@@ -7,6 +7,7 @@ import { prisma } from '../lib/db.js';
 import { enqueueOutbound } from '../lib/queues.js';
 import { weeklyReport } from '../insights/report.js';
 import { notifyChild } from './notify.js';
+import { signature } from '../routines/scheduler.js';
 
 // Care rules: deterministic follow-ups and escalation. Runs every minute after the scheduler.
 //   1. Follow up once with the parent if a reminder is unanswered (or "not yet") for a while.
@@ -44,7 +45,7 @@ export async function runCareRules(now: DateTime = DateTime.utc()) {
       if (now >= DateTime.fromJSDate(since).plus({ minutes: routine.followUpMinutes })) {
         const claimed = await prisma.routineOccurrence.updateMany({ where: { id: occ.id, followUpAt: null }, data: { followUpAt: now.toJSDate() } });
         if (claimed.count === 1) {
-          await enqueueOutbound({ parentId: parent.id, toPhone: parent.phone, occurrenceId: occ.id, ...followUp(parent, routine, occ.id) });
+          await enqueueOutbound({ parentId: parent.id, toPhone: parent.phone, occurrenceId: occ.id, ...followUp(parent, routine, occ.id, await signature(parent)) });
           occ.followUpAt = now.toJSDate();
           followUps++;
         }

@@ -1,4 +1,5 @@
-import { FREE_PARENTS, planOf, requireFamily } from '../lib/plan.js';
+import { labs } from '../lib/env.js';
+import { FREE_HISTORY_DAYS, FREE_PARENTS, planOf, requireFamily } from '../lib/plan.js';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { DateTime } from 'luxon';
 import { z } from 'zod';
@@ -28,6 +29,7 @@ const routineFields = z.object({
   followUpMinutes: z.number().int().min(15).max(720).nullable().optional(),
   alertAfterMinutes: z.number().int().min(30).max(1440).nullable().optional(),
   medicineId: z.string().nullish(),
+  message: z.string().trim().max(300).nullish().transform((v) => v || null),
   active: z.boolean().default(true),
 });
 
@@ -94,6 +96,11 @@ const parentBody = z.object({
   language: z.enum(['HINGLISH', 'HINDI', 'ENGLISH']).default('HINGLISH'),
   routines: z.array(routineFields).max(12).default([]),
 });
+
+/** Weeks that start more than two weeks back are part of the Family plan's full history. */
+async function requireRecent(parentId: string, start?: string) {
+  if (start && start < DateTime.utc().minus({ days: FREE_HISTORY_DAYS + 6 }).toISODate()!) await requireFamily('history', { parentId });
+}
 
 export async function parentRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate);
@@ -212,7 +219,8 @@ export async function parentRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string }; Querystring: { days?: string } }>('/parents/:id/trends', async (req) => {
     await ownParent(req, req.params.id);
-    const days = [7, 14, 30, 90].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
+    const days = [7, 14, 30, 90].includes(Number(req.query.days)) ? Number(req.query.days) : FREE_HISTORY_DAYS;
+    if (days > FREE_HISTORY_DAYS) await requireFamily('history', { parentId: req.params.id });
     return trends(req.params.id, days);
   });
 
@@ -252,12 +260,14 @@ export async function parentRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string }; Querystring: { start?: string } }>('/parents/:id/schedule', async (req) => {
     await ownParent(req, req.params.id);
     const start = req.query.start && /^\d{4}-\d{2}-\d{2}$/.test(req.query.start) ? req.query.start : undefined;
+    await requireRecent(req.params.id, start);
     return weekSchedule(req.params.id, start);
   });
 
   app.get<{ Params: { id: string }; Querystring: { start?: string } }>('/parents/:id/report', async (req) => {
     await ownParent(req, req.params.id);
     const start = req.query.start && /^\d{4}-\d{2}-\d{2}$/.test(req.query.start) ? req.query.start : undefined;
+    await requireRecent(req.params.id, start);
     return weeklyReport(req.params.id, start);
   });
 
@@ -287,6 +297,7 @@ export async function parentRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>('/parents/:id/ask', { config: { rateLimit: { max: 30, timeWindow: '1 hour' } } }, async (req) => {
     await ownParent(req, req.params.id);
+    if (!labs) throw notFound();
     const { question } = z.object({ question: z.string().trim().min(2).max(300) }).parse(req.body);
     return askAboutParent(req.params.id, question);
   });

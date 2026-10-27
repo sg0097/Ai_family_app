@@ -97,3 +97,14 @@ export function Toast({ message }: { message: string | null }) {
 export function Skeleton({ h = 120 }: { h?: number }) {
   return <div className="skeleton" style={{ height: h }} />;
 }
+
+/** Shown where a Family plan feature was asked for on the free plan, or for any other fetch error. */
+export function PlanNote({ text }: { text: string }) {
+  const plan = /Family plan/.test(text);
+  return (
+    <div className={`plan-note${plan ? ' is-plan' : ''}`} role="note">
+      <span>{text}</span>
+      {plan && <Link to="/app/plan" className="btn sm">See the Family plan</Link>}
+    </div>
+  );
+}

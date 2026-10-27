@@ -71,7 +71,13 @@ export async function sendReminder(occurrenceId: string, parent: ParentProfile, 
     data: { status: 'SENT', sentAt: at, followUpAt: null, childAlertedAt: null },
   });
   if (claimed.count !== 1) return;
-  await enqueueOutbound({ parentId: parent.id, toPhone: parent.phone, occurrenceId, voiceClipId: routine.voiceClipId ?? undefined, ...reminder(parent, routine, occurrenceId) });
+  await enqueueOutbound({ parentId: parent.id, toPhone: parent.phone, occurrenceId, voiceClipId: routine.voiceClipId ?? undefined, ...reminder(parent, routine, occurrenceId, await signature(parent)) });
+}
+
+/** The child's first name that signs every reminder: whoever added the parent. */
+export async function signature(parent: Pick<ParentProfile, 'userId'>) {
+  const owner = await prisma.user.findUnique({ where: { id: parent.userId }, select: { name: true } });
+  return owner?.name.trim().split(/\s+/)[0] ?? '';
 }
 
 /** One-tap nudge: (re)open today's occurrence for a routine and send its reminder immediately. */

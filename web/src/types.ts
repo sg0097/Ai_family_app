@@ -72,6 +72,7 @@ export interface Routine extends ScheduleFields, CareFields {
   id: string;
   medicineId: string | null;
   voiceClipId: string | null;
+  message: string | null;
   type: RoutineType;
   name: string;
   timeOfDay: string;
@@ -83,6 +84,8 @@ export interface Routine extends ScheduleFields, CareFields {
 export interface RoutineInput extends ScheduleFields, CareFields {
   type: RoutineType;
   medicineId?: string | null;
+  /** The child's own words; empty means the standard wording. */
+  message?: string | null;
   name: string;
   timeOfDay: string;
   target?: number | null;

@@ -5,7 +5,7 @@ import { refreshMemory } from '../care/memory.js';
 import { checkIn, strings } from '../conversation/copy.js';
 import { accessibleBy } from '../lib/access.js';
 import { prisma } from '../lib/db.js';
-import { isDemo, isDev } from '../lib/env.js';
+import { isDemo, isDev, labs } from '../lib/env.js';
 import { HttpError, notFound } from '../lib/http.js';
 import { enqueueOutbound } from '../lib/queues.js';
 import { FAMILY_PRICE_INR, FREE_PARENTS, FAMILY_PARENTS, planOf, requireFamily } from '../lib/plan.js';
@@ -106,6 +106,7 @@ export async function familyRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>('/parents/:id/check-ins', { config: { rateLimit: { max: 20, timeWindow: '1 hour' } } }, async (req, reply) => {
     const parent = await parentFor(req, req.params.id);
     if (parent.consentStatus !== 'GRANTED') throw new HttpError(409, `${parent.name} hasn’t said yes on WhatsApp yet`);
+    await requireFamily('checkin', { parentId: parent.id });
     const body = checkInBody.parse(req.body);
     if (body.voiceClipId) {
       const clip = await clipFor(req, body.voiceClipId);
@@ -126,6 +127,7 @@ export async function familyRoutes(app: FastifyInstance) {
   // ── Memory ──
   app.get<{ Params: { id: string } }>('/parents/:id/memory', async (req) => {
     const parent = await parentFor(req, req.params.id);
+    if (!labs) throw notFound();
     await refreshMemory(parent.id);
     return prisma.memory.findMany({ where: { parentId: parent.id, status: { not: 'DISMISSED' } }, orderBy: [{ status: 'asc' }, { updatedAt: 'desc' }] });
   });

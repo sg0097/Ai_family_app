@@ -59,5 +59,5 @@ export function usePreview(path: '/preview/reminder' | '/preview/consent', input
   return preview;
 }
 
-export const useReminderPreview = (input: { parentName: string; language: string; type: string; name: string; frequency: string; medicine?: { name: string; dose: string | null } | null }) =>
+export const useReminderPreview = (input: { parentName: string; language: string; type: string; name: string; frequency: string; medicine?: { name: string; dose: string | null } | null; message?: string | null }) =>
   usePreview('/preview/reminder', input);

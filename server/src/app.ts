@@ -7,7 +7,7 @@ import { prisma } from './lib/db.js';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import fastifyStatic from '@fastify/static';
-import { env, isDemo, isDev } from './lib/env.js';
+import { env, isDemo, isDev, labs } from './lib/env.js';
 import { authRoutes } from './routes/auth.js';
 import { devRoutes } from './routes/dev.js';
 import { parentRoutes } from './routes/parents.js';
@@ -59,7 +59,7 @@ export async function buildApp() {
 
   await app.register(
     async (api) => {
-      api.get('/health', async () => ({ ok: true, devTools: isDev, demo: isDemo }));
+      api.get('/health', async () => ({ ok: true, devTools: isDev, demo: isDemo, labs }));
       await api.register(authRoutes);
       await api.register(parentRoutes);
       await api.register(teamRoutes);

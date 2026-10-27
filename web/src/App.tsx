@@ -19,6 +19,8 @@ interface Session {
   user: User | null;
   devTools: boolean;
   demo: boolean;
+  /** AI-dependent features (Ask, patterns), off until proven with real parents. */
+  labs: boolean;
   family: FamilyMember[] | null;
   refreshFamily: () => Promise<void>;
   signIn: (token: string, user: User) => void;
@@ -34,6 +36,7 @@ export function App() {
   const [loading, setLoading] = useState(Boolean(getToken()));
   const [devTools, setDevTools] = useState(false);
   const [demo, setDemo] = useState(false);
+  const [labs, setLabs] = useState(false);
   const [family, setFamily] = useState<FamilyMember[] | null>(null);
 
   const refreshFamily = async () => {
@@ -41,7 +44,7 @@ export function App() {
   };
 
   useEffect(() => {
-    api<{ devTools: boolean; demo?: boolean }>('/health').then((h) => { setDevTools(h.devTools); setDemo(Boolean(h.demo)); }).catch(() => {});
+    api<{ devTools: boolean; demo?: boolean; labs?: boolean }>('/health').then((h) => { setDevTools(h.devTools); setDemo(Boolean(h.demo)); setLabs(Boolean(h.labs)); }).catch(() => {});
     if (getToken()) api<User>('/me').then(setUser).catch(() => setToken(null)).finally(() => setLoading(false));
   }, []);
   useEffect(() => {
@@ -60,6 +63,7 @@ export function App() {
     user,
     devTools,
     demo,
+    labs,
     family,
     refreshFamily,
     signIn: (token, u) => {

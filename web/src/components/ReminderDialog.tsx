@@ -67,6 +67,7 @@ export function ReminderDialog({ parentId, parentName, language, routine, start,
     name: f.name,
     frequency: f.frequency,
     medicine: f.type === 'MEDICINE' && linked ? { name: linked.name, dose: linked.dose } : null,
+    message: f.message?.trim() || null,
   });
 
   async function save(e: FormEvent) {
@@ -75,12 +76,13 @@ export function ReminderDialog({ parentId, parentName, language, routine, start,
     setErr('');
     const { type, name, timeOfDay, frequency, daysOfWeek, intervalDays, dayOfMonth, followUpMinutes, alertAfterMinutes, target } = f;
     const medicineId = type === 'MEDICINE' ? f.medicineId ?? null : null;
+    const message = f.message?.trim() || null;
     try {
       if (routine) {
-        await api(`/routines/${routine.id}`, { method: 'PATCH', body: { name, timeOfDay, frequency, daysOfWeek, intervalDays, dayOfMonth, followUpMinutes, alertAfterMinutes, target, medicineId } });
+        await api(`/routines/${routine.id}`, { method: 'PATCH', body: { name, timeOfDay, frequency, daysOfWeek, intervalDays, dayOfMonth, followUpMinutes, alertAfterMinutes, target, medicineId, message } });
         onSaved('Reminder updated');
       } else {
-        await api(`/parents/${parentId}/routines`, { body: { type, name, timeOfDay, frequency, daysOfWeek, intervalDays, dayOfMonth, followUpMinutes, alertAfterMinutes, target, medicineId } });
+        await api(`/parents/${parentId}/routines`, { body: { type, name, timeOfDay, frequency, daysOfWeek, intervalDays, dayOfMonth, followUpMinutes, alertAfterMinutes, target, medicineId, message } });
         onSaved(`Reminder added for ${fmtTime(timeOfDay)}`);
       }
     } catch (e2) {
@@ -141,6 +143,12 @@ export function ReminderDialog({ parentId, parentName, language, routine, start,
         <div>
           <span className="field-label">If it’s not done</span>
           <CarePicker value={f} onChange={(v) => setF({ ...f, ...v })} parentName={parentName} />
+        </div>
+        <div>
+          <label className="field-label" htmlFor="rd-msg">In your own words <span className="muted">(optional)</span></label>
+          <textarea className="input" id="rd-msg" rows={2} maxLength={300} value={f.message ?? ''} onChange={(e) => setF({ ...f, message: e.target.value })}
+            placeholder={`e.g. ${parentName}, dawai le lo. Main yaad kar raha hoon ❤️`} />
+          <p className="hint">Write it the way you’d say it. It’s sent as you wrote it, signed with your name. Leave empty for our warm standard wording.</p>
         </div>
         <div className="preview-box" aria-label="What they will see on WhatsApp">
           <span className="tiny">{parentName} will get on WhatsApp</span>

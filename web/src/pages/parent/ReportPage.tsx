@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Num } from '../../components/Num';
 import { ColumnChart, LineChart } from '../../components/charts';
 import { Icon, RoutineIcon } from '../../components/Icon';
-import { Skeleton } from '../../components/ui';
+import { PlanNote, Skeleton } from '../../components/ui';
 import { WeekGrid } from '../../components/WeekGrid';
 import { fmtDate } from '../../format';
 import { useApi } from '../../hooks';
@@ -40,6 +40,7 @@ export function ReportPage() {
         </div>
         <button className="btn ghost sm" onClick={() => window.print()}><Icon name="print" size={16} /> Save as PDF</button>
       </div>
+      {report.error && <PlanNote text={report.error} />}
 
       <section className="card pad-lg">
         <div className="print-only" style={{ marginBottom: 10 }}><b>Weekly health report · {name}</b> · {range}</div>

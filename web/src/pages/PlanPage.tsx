@@ -10,17 +10,19 @@ import type { PlanInfo, User } from '../types';
 type Plan = PlanInfo & { freeParents: number; familyParents: number; payments: 'demo' | 'unavailable' };
 
 const FREE = [
-  'WhatsApp reminders in Hinglish, Hindi or English',
-  'Alerts when something isn’t done, HELP right away',
-  'Today, weekly report and full history',
-  'Medicines, refills, doctor visits and the doctor report',
-  'Ask about your parent',
+  'Reminders on WhatsApp, signed with your name',
+  'Write them in your own words',
+  'She replies with one tap, or just “haan”',
+  'Today’s status and this week’s report',
+  'An alert if something isn’t done; HELP right away',
+  'The last 2 weeks of history',
 ];
 const FAMILY = [
   'Reminders in your own voice',
-  'Check-ins with your voice note',
-  'Up to 4 parents (both sets of parents)',
-  'Brothers and sisters on the same dashboard',
+  'Say hi any time; she answers with one tap',
+  'Doctor visit report to print or share',
+  'Full history',
+  'Up to 4 parents, with brothers and sisters',
   'The 1 PM WhatsApp summary',
 ];
 
@@ -55,21 +57,21 @@ export function PlanPage() {
           ? `You’re on the Family plan${data.renewsAt ? `, until ${fmtDate(data.renewsAt, { day: 'numeric', month: 'long' })}` : ''}.`
           : data.trialDaysLeft
             ? `Family plan features are open for ${data.trialDaysLeft} more day${data.trialDaysLeft === 1 ? '' : 's'} of your free trial.`
-            : 'You’re on the free plan. Everything that keeps your parent safe stays free.'}
+            : 'You’re on the free plan. Reminders, replies and alerts stay free.'}
       </p>
 
       <div className="plans">
         <section className={`plan-card${!paid ? ' current' : ''}`}>
           <div className="plan-name">Free</div>
           <div className="plan-price"><b>₹0</b></div>
-          <p className="tiny">One parent, everything essential.</p>
+          <p className="tiny">One parent, the daily essentials.</p>
           <ul>{FREE.map((f) => <li key={f}><Icon name="check" size={14} /> {f}</li>)}</ul>
           {!paid && <span className="pill">{data.trialDaysLeft ? 'After your trial' : 'Your plan'}</span>}
         </section>
         <section className={`plan-card family${paid ? ' current' : ''}`}>
           <div className="plan-name">Family</div>
           <div className="plan-price"><b>₹{data.priceInr}</b><span className="tiny"> / month</span></div>
-          <p className="tiny">Everything in Free, and your voice in their day.</p>
+          <p className="tiny">Everything in Free, and your voice in her day.</p>
           <ul>{FAMILY.map((f) => <li key={f}><Icon name="check" size={14} /> {f}</li>)}</ul>
           {paid ? (
             <button className="btn quiet sm" disabled={busy} onClick={() => change('cancel')}>Switch back to Free</button>

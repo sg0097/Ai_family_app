@@ -205,6 +205,8 @@ model Routine {
   target            Int? // e.g. glasses of water per day
   medicineId        String?
   medicine          Medicine?           @relation(fields: [medicineId], references: [id], onDelete: SetNull)
+  // The child's own words for this reminder. When empty, the standard warm wording is used.
+  message           String?
   // Played to the parent right after this reminder: the child's own voice.
   voiceClipId       String?
   voiceClip         VoiceClip?          @relation(fields: [voiceClipId], references: [id], onDelete: SetNull)

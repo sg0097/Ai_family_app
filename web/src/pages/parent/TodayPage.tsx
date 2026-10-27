@@ -7,7 +7,7 @@ import { Num } from '../../components/Num';
 import { Icon, RoutineIcon } from '../../components/Icon';
 import { ReminderDialog, blankReminder, missingSuggestions } from '../../components/ReminderDialog';
 import { describeFrequency } from '../../components/RoutineForm';
-import { Skeleton, Toast } from '../../components/ui';
+import { PlanNote, Skeleton, Toast } from '../../components/ui';
 import { DayStrip } from '../../components/today/DayStrip';
 import { DayTiles } from '../../components/today/DayTiles';
 import { DayTimeline } from '../../components/today/DayTimeline';
@@ -20,6 +20,7 @@ import { useApi, useToast } from '../../hooks';
 import { dayStatus } from '../../status';
 import type { ChatMessage, Routine, RoutineInput, WeekSchedule } from '../../types';
 import { useParent } from './ParentDashboard';
+import { useSession } from '../../App';
 
 const addDays = (iso: string, n: number) => {
   const d = new Date(`${iso}T12:00:00Z`);
@@ -29,6 +30,7 @@ const addDays = (iso: string, n: number) => {
 
 export function TodayPage() {
   const { id, today, reload } = useParent();
+  const { labs } = useSession();
   const p = today.parent;
   const routines = useApi<Routine[]>(`/parents/${id}/routines`);
   const { toast, show } = useToast();
@@ -111,6 +113,7 @@ export function TodayPage() {
           {week.data ? (
             <DayStrip week={week.data} selected={selected} onSelect={setSelected} onWeek={moveWeek} canNext={!thisWeek} />
           ) : <Skeleton h={86} />}
+          {week.error && <PlanNote text={week.error} />}
 
           <div className="tiles-head">
             <h2>
@@ -176,7 +179,7 @@ export function TodayPage() {
         </div>
       </div>
 
-      {consented && <Ask parentId={id} name={p.name} />}
+      {consented && labs && <Ask parentId={id} name={p.name} />}
 
       {openItem && (
         <RoutineSheet

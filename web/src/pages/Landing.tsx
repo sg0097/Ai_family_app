@@ -5,14 +5,14 @@ import { useSession } from '../App';
 import { Icon, type IconName } from '../components/Icon';
 import { Logo } from '../components/ui';
 
+// Only exchanges the product handles reliably today: buttons, "haan", and readings like 130/80.
 const SCRIPT: { who: 'them' | 'me'; text: string; buttons?: string[] }[] = [
-  { who: 'them', text: 'Mummy, morning wali dawa le li? ❤️', buttons: ['✅ Le li', '❌ Abhi nahi'] },
-  { who: 'me', text: 'Haan beta, breakfast ke baad le li thi' },
+  { who: 'them', text: 'Mummy, morning wali dawa le li? ❤️\n— Priya', buttons: ['✅ Le li', '❌ Abhi nahi'] },
+  { who: 'me', text: '✅ Le li' },
   { who: 'them', text: 'Shabash! ❤️' },
-  { who: 'me', text: 'Aaj BP 138/85 tha' },
-  { who: 'them', text: 'BP 138/85 note kar liya ❤️' },
-  { who: 'me', text: 'Kal se pair mein thoda dard hai' },
-  { who: 'them', text: 'Dhyan rakhiye ❤️ Priya ko bhi dikh jayega.' },
+  { who: 'them', text: 'Mummy, aaj BP check kiya? Reading bhej dijiye 🩺\n— Priya' },
+  { who: 'me', text: '130/80' },
+  { who: 'them', text: 'BP 130/80 note kar liya ❤️' },
 ];
 
 function LiveChat() {
@@ -109,9 +109,9 @@ function Chip({ icon, tone }: { icon: IconName; tone: Tone }) {
 
 const ROTOR: { icon: IconName; tone: Tone; text: string }[] = [
   { icon: 'pill', tone: 'pink', text: 'medicine' },
-  { icon: 'heart', tone: 'blue', text: 'BP' },
-  { icon: 'smile', tone: 'amber', text: 'mood' },
-  { icon: 'walk', tone: 'green', text: 'walk' },
+  { icon: 'heart', tone: 'blue', text: 'BP check' },
+  { icon: 'walk', tone: 'green', text: 'evening walk' },
+  { icon: 'glass', tone: 'amber', text: 'paani' },
 ];
 
 function Rotor() {
@@ -129,8 +129,8 @@ function Rotor() {
 }
 
 const WAYS = {
-  tap: { label: 'Tap', hint: 'one touch', text: 'She taps ✅ Le li under the reminder. Done.', chat: [['them', 'Mummy, morning wali dawa le li? ❤️'], ['me', '✅ Le li'], ['them', 'Shabash! ❤️']] },
-  type: { label: 'Type', hint: 'her words', text: 'She writes it her way. We understand it.', chat: [['them', 'Mummy, aaj BP check kiya?'], ['me', 'Haan, 130/80 tha'], ['them', 'BP 130/80 note kar liya ❤️']] },
+  tap: { label: 'Tap', hint: 'one touch', text: 'She taps ✅ Le li under your reminder. Done.', chat: [['them', 'Mummy, morning wali dawa le li? ❤️\n— Priya'], ['me', '✅ Le li'], ['them', 'Shabash! ❤️']] },
+  type: { label: 'Haan', hint: 'or a reading', text: 'She can just reply “haan”, or send a reading like 130/80.', chat: [['them', 'Mummy, aaj BP check kiya?\n— Priya'], ['me', '130/80'], ['them', 'BP 130/80 note kar liya ❤️']] },
   help: { label: 'HELP', hint: 'any time', text: 'She sends HELP. You get an alert at once.', chat: [['me', 'HELP'], ['them', 'Maine Priya ko abhi bata diya hai 🙏 Turant madad chahiye to 112 par call kariye.']] },
 } as const;
 
@@ -153,21 +153,25 @@ function WayChat({ way }: { way: keyof typeof WAYS }) {
 // Every number links to where it comes from. Keep it that way when adding more.
 const NEED = [
   { pre: '', value: 149, post: 'M', line: 'Indians are 60 or older. By 2050 it will be 347 million.', source: 'UNFPA, India Ageing Report 2023', url: 'https://india.unfpa.org/en/news/india-ageing-elderly-make-20-population-2050-unfpa-report' },
-  { pre: '', value: 2046, post: '', line: 'The year India’s elderly are expected to outnumber its children.', source: 'UNFPA, India Ageing Report 2023', url: 'https://india.unfpa.org/en/news/india-ageing-elderly-make-20-population-2050-unfpa-report', plain: true },
   { pre: '1 in ', value: 5, post: '', line: 'older Indians live alone or only with their spouse. Children moving away is the top reason.', source: 'BKPAI survey, PLoS ONE 2021', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8046240', dark: true },
-  { pre: '', value: 45, post: '%', line: 'of Indians over 50 have high blood pressure, which needs daily medicine and regular checks.', source: 'LASI Wave 1 (2017–18)', url: 'https://doaj.org/article/5d32e56549094e4aa58056b016e71460' },
-  { pre: '1 in ', value: 2, post: '', line: 'people on long-term treatment don’t take their medicines as prescribed.', source: 'WHO, Adherence to Long-Term Therapies', url: 'https://www.who.int/publications/i/item/9241545992' },
+  { pre: '1 in ', value: 2, post: '', line: 'people on long-term medicines don’t take them as prescribed. Forgetting is a big part of it.', source: 'WHO, Adherence to Long-Term Therapies', url: 'https://www.who.int/publications/i/item/9241545992' },
   { pre: '', value: 500, post: 'M+', line: 'Indians already use WhatsApp. Your parents probably do too.', source: 'Meta, 2024', url: 'https://www.storyboard18.com/how-it-works/meta-doubles-down-on-whatsapp-business-in-india-23713.htm' },
 ];
 
 const FAQ = [
-  ['Does Maa need to install anything?', 'No. If she can reply on WhatsApp, she’s set. There is no app for her.'],
-  ['What if she doesn’t reply?', 'She gets one gentle reminder later. If it’s still not done, we tell you. No reply is shown as “no reply”, never as a missed dose.'],
-  ['Is this a medical service?', 'No. We never diagnose and never change medicines. Readings are shown exactly as she sent them. In an emergency, call 112.'],
+  ['Will this make my parent healthier?', 'We don’t promise that, and we don’t give medical advice. We help you stay involved in her day: your reminders reach her, and you see how she replied.'],
+  ['Does it watch or monitor her?', 'No. She only gets the reminders you set, she knows they come from you, and she chooses whether to reply. She can reply STOP any time and everything stops.'],
+  ['Is it a bot pretending to be me?', 'No. Every reminder is signed with your name, and you can write it in your own words or record it in your own voice. We only deliver it.'],
+  ['Does Maa need to install anything?', 'No. If she can reply on WhatsApp, she’s set.'],
+  ['What if she doesn’t reply?', 'She gets one gentle reminder later. If it’s still not done, we tell you, so you can call. No reply is shown as “no reply”, never as a missed dose.'],
   ['Which languages?', 'Hinglish, Hindi and English. You pick for each parent.'],
-  ['Who sees her messages?', 'Only you and the family members you invite.'],
-  ['Can she stop it?', 'Yes. She replies STOP any time and everything stops.'],
 ] as const;
+
+const WORKS = [
+  { icon: 'message' as IconName, tone: 'pink' as Tone, title: 'Your words, not an app’s', text: 'Write each reminder the way you’d say it. We send it as you wrote it.' },
+  { icon: 'heart' as IconName, tone: 'violet' as Tone, title: 'Signed with your name', text: '“Mummy, dawai le li? ❤️ — Priya”. She knows it’s you.' },
+  { icon: 'mic' as IconName, tone: 'green' as Tone, title: 'Your voice, if you like', text: 'Record it once. She hears you before every reminder.' },
+];
 
 export function Landing() {
   const { user } = useSession();
@@ -180,6 +184,7 @@ export function Landing() {
         <nav className="nav">
           <Logo />
           <div className="links">
+            <a href="#why">Why it works</a>
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
             <a href="#faq">FAQ</a>
@@ -196,14 +201,15 @@ export function Landing() {
       </div>
 
       <header className="st-hero">
+        <span className="st-eyebrow">For children living away from their parents</span>
         <h1 className="st-h1">
-          Know Maa’s<br />
-          <Rotor /><br />
-          <span className="st-grey">is taken care of.</span>
+          Remind Maa about<br />
+          her <Rotor /><br />
+          <span className="st-grey">with love.</span>
         </h1>
-        <p className="st-lede">Reminders go to her on WhatsApp, in her language. You see her day here, without calling five times.</p>
+        <p className="st-lede">Your reminders reach her on WhatsApp, in your words and signed with your name. She replies with one tap, and you know how her day went.</p>
         <Link to={start} className="btn lg">Start free</Link>
-        <p className="st-note">Free to start. Nothing for her to install.</p>
+        <p className="st-note">Nothing for her to install. Nothing is sent until she says yes.</p>
       </header>
 
       <div className="st-stage">
@@ -215,27 +221,28 @@ export function Landing() {
 
       <section className="section" id="why">
         <div className="st-center">
-          <span className="st-eyebrow">Why this matters</span>
-          <h2 className="st-h2">Parents are <Chip icon="heart" tone="pink" /> ageing. <span className="st-grey">Children are far away.</span></h2>
-          <p className="st-lede">Someone has to remember the 9 AM tablet. These are the numbers behind every “dawai li?” call.</p>
+          <span className="st-eyebrow">Why it works</span>
+          <h2 className="st-h2">Parents don’t forget because they don’t care. <span className="st-grey">They forget because no one reminds them.</span></h2>
+          <p className="st-lede">When it’s their own child reminding them, it feels like love, and they do it. Family Care carries your reminders through her day, so she feels you there.</p>
         </div>
-        <div className="need-grid">
-          {NEED.map((n) => (
-            <a key={n.line} className={`need${n.dark ? ' dark' : ''}`} href={n.url} target="_blank" rel="noreferrer">
-              <div className="need-num">{n.pre}{n.plain ? n.value : <CountUp value={n.value} />}{n.post}</div>
-              <p>{n.line}</p>
-              <span className="need-src">{n.source} ↗</span>
-            </a>
+        <div className="works">
+          {WORKS.map((w) => (
+            <div key={w.title} className="bx">
+              <span className={`ichip c-${w.tone}`} style={{ fontSize: 46 }} aria-hidden><Icon name={w.icon} stroke={2.4} /></span>
+              <div className="grow" />
+              <h3>{w.title}</h3>
+              <p>{w.text}</p>
+            </div>
           ))}
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" style={{ paddingTop: 0 }}>
         <div className="st-split">
           <div>
             <span className="st-eyebrow">For her</span>
-            <h2 className="st-h2">She just <Chip icon="message" tone="green" /> chats. <span className="st-grey">Like always.</span></h2>
-            <p className="st-lede">No new app, no passwords. Reminders arrive in her WhatsApp, and she answers however she likes.</p>
+            <h2 className="st-h2">She just <Chip icon="message" tone="green" /> replies. <span className="st-grey">One tap.</span></h2>
+            <p className="st-lede">No new app, no passwords. Your reminder arrives in her WhatsApp with two buttons.</p>
             <div className="seg" role="tablist" aria-label="How she replies">
               {(Object.keys(WAYS) as (keyof typeof WAYS)[]).map((k) => (
                 <button key={k} role="tab" aria-selected={way === k} className={way === k ? 'on' : ''} onClick={() => setWay(k)}>
@@ -251,8 +258,8 @@ export function Landing() {
 
       <section className="section" id="features" style={{ paddingTop: 0 }}>
         <div className="st-center">
-          <span className="st-eyebrow">Everything in one place</span>
-          <h2 className="st-h2">A whole <Chip icon="heart" tone="pink" /> care team. <span className="st-grey">One <Chip icon="message" tone="black" /> chat.</span></h2>
+          <span className="st-eyebrow">What you get</span>
+          <h2 className="st-h2">A few things, <span className="st-grey">done really well.</span></h2>
         </div>
         <div className="bento4">
           <div className="bx w2">
@@ -262,72 +269,69 @@ export function Landing() {
             <div className="pill-row"><span className="on"><Icon name="play" size={12} /> 0:07</span><span>Good morning, Mummy</span></div>
           </div>
           <div className="bx">
-            <div className="huge"><CountUp value={3} /></div>
+            <div className="icon-sq"><Icon name="check" size={24} /></div>
             <div className="grow" />
-            <h3>languages</h3>
-            <p>Hinglish, Hindi, English.</p>
+            <h3>One-tap replies</h3>
+            <p>✅ Le li or ❌ Abhi nahi. Or just “haan”.</p>
           </div>
           <div className="bx dark">
             <div className="icon-sq"><Icon name="alert" size={24} /></div>
             <div className="grow" />
             <h3>One word: HELP</h3>
-            <p>She sends it, you know at once.</p>
-          </div>
-          <div className="bx">
-            <div className="icon-sq"><Icon name="pill" size={24} /></div>
-            <div className="grow" />
-            <h3>Medicines</h3>
-            <p>Reminders, and a nudge before tablets run out.</p>
-          </div>
-          <div className="bx">
-            <div className="icon-sq"><Icon name="report" size={24} /></div>
-            <div className="grow" />
-            <h3>Doctor report</h3>
-            <p>Every BP and sugar reading on one page.</p>
+            <p>She sends it, you’re told at once.</p>
           </div>
           <div className="bx w2">
-            <h3>Know how she is. At a glance.</h3>
-            <p>One look tells you what’s done and what’s waiting.</p>
+            <h3>Know how her day went. At a glance.</h3>
+            <p>What she confirmed, what’s still waiting, and when to call.</p>
             <div className="grow" />
             <div className="pill-row">
               <span className="on"><i className="dot g" /> Medicine done</span>
               <span><i className="dot a" /> BP waiting</span>
-              <span><i className="dot g" /> Feeling good</span>
-              <span><i className="dot r" /> HELP</span>
+              <span><i className="dot g" /> Walk done</span>
             </div>
-          </div>
-          <div className="bx w2">
-            <div className="icon-sq"><Icon name="message" size={24} /></div>
-            <div className="grow" />
-            <h3>Brothers and sisters, together.</h3>
-            <p>Everyone sees the same day and gets the same alerts.</p>
           </div>
           <div className="bx">
             <div className="icon-sq"><Icon name="smile" size={24} /></div>
             <div className="grow" />
             <h3>Say hi</h3>
-            <p>A check-in she answers with one tap.</p>
+            <p>“Kaisi ho?” any time. She answers with one tap.</p>
           </div>
           <div className="bx">
-            <div className="icon-sq"><Icon name="memory" size={24} /></div>
+            <div className="icon-sq"><Icon name="report" size={24} /></div>
             <div className="grow" />
-            <h3>Spots patterns</h3>
-            <p>Knee pain three days running? You’ll know.</p>
+            <h3>Doctor visit report</h3>
+            <p>Her readings and medicines on one page, as she sent them.</p>
           </div>
           <div className="bx bx-wide-row">
             <div className="icon-sq"><Icon name="info" size={22} /></div>
             <div>
-              <h3 style={{ fontSize: '1.1rem' }}>A care companion, not a doctor.</h3>
-              <p>We never diagnose or change medicines. She says yes first, and STOP always works.</p>
+              <h3 style={{ fontSize: '1.1rem' }}>What we are, and what we’re not.</h3>
+              <p>We help you stay involved in her day. We are not a doctor, we don’t diagnose or give medical advice, and we never change medicines. She says yes first, and STOP always works.</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="section" id="numbers" style={{ paddingTop: 0 }}>
+        <div className="st-center">
+          <span className="st-eyebrow">Why this matters</span>
+          <h2 className="st-h2">Parents are <Chip icon="heart" tone="pink" /> ageing. <span className="st-grey">Children are far away.</span></h2>
+        </div>
+        <div className="need-grid four">
+          {NEED.map((n) => (
+            <a key={n.line} className={`need${n.dark ? ' dark' : ''}`} href={n.url} target="_blank" rel="noreferrer">
+              <div className="need-num">{n.pre}<CountUp value={n.value} />{n.post}</div>
+              <p>{n.line}</p>
+              <span className="need-src">{n.source} ↗</span>
+            </a>
+          ))}
         </div>
       </section>
 
       <section className="section" id="pricing" style={{ paddingTop: 0 }}>
         <div className="st-center">
           <h2 className="st-h2">Start <Chip icon="check" tone="green" /> free.<br /><span className="st-grey"><Chip icon="calendar" tone="black" /> 14 days of Family on us.</span></h2>
-          <p className="st-lede">Everything that keeps her safe is free, always.</p>
+          <p className="st-lede">Daily reminders, replies and alerts are free, always.</p>
         </div>
         <div className="st-plans">
           <div className="st-plan">
@@ -335,14 +339,14 @@ export function Landing() {
             <div className="who">For one parent.</div>
             <div className="price">₹0<small>forever</small></div>
             <Link to={start} className="btn">Start free</Link>
-            <ul>{['WhatsApp reminders', 'Alerts and HELP', 'Weekly and doctor report', 'Medicines and refills'].map((f) => <li key={f}><Icon name="check" size={15} /> {f}</li>)}</ul>
+            <ul>{['Reminders in your words, signed by you', 'One-tap replies', 'Today and this week at a glance', 'Alerts and HELP'].map((f) => <li key={f}><Icon name="check" size={15} /> {f}</li>)}</ul>
           </div>
           <div className="st-plan">
             <h3>Family</h3>
             <div className="who">For the whole family.</div>
             <div className="price">₹199<small>a month</small></div>
             <Link to={start} className="btn">Try free for 14 days</Link>
-            <ul>{['Everything in Free', 'Reminders in your voice', 'Up to 4 parents', 'Brothers and sisters too'].map((f) => <li key={f}><Icon name="check" size={15} /> {f}</li>)}</ul>
+            <ul>{['Everything in Free', 'Reminders in your own voice', 'Say hi any time', 'Doctor visit report and full history', 'Up to 4 parents, with siblings'].map((f) => <li key={f}><Icon name="check" size={15} /> {f}</li>)}</ul>
           </div>
         </div>
       </section>
@@ -351,7 +355,7 @@ export function Landing() {
         <div className="faq">
           <div>
             <h2 className="st-h2">Questions.</h2>
-            <p className="st-lede" style={{ marginTop: 16 }}>What families ask before they start.</p>
+            <p className="st-lede" style={{ marginTop: 16 }}>Straight answers about what we do, and what we don’t.</p>
           </div>
           <div className="faq-list">
             {FAQ.map(([q, a], i) => (

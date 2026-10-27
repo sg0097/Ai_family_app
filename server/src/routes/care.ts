@@ -6,6 +6,7 @@ import { daysLeft } from '../care/refill.js';
 import { consentRequest, reminder } from '../conversation/copy.js';
 import { doctorReport } from '../insights/doctorReport.js';
 import { accessibleBy } from '../lib/access.js';
+import { requireFamily } from '../lib/plan.js';
 import { prisma } from '../lib/db.js';
 import { HttpError, notFound } from '../lib/http.js';
 
@@ -166,12 +167,14 @@ export async function careRoutes(app: FastifyInstance) {
         name: z.string().trim().max(40).default(''),
         frequency: z.enum(['DAILY', 'WEEKLY', 'INTERVAL', 'MONTHLY']).default('DAILY'),
         medicine: z.object({ name: text(60), dose: optional(60) }).nullish(),
+        message: z.string().trim().max(300).nullish(),
       })
       .parse(req.body);
     const placeholder = { MEDICINE: 'dawa', BP: 'BP check', SUGAR: 'sugar test', WATER: 'paani', WALK: 'walk', WELLBEING: 'kaisa feel' }[b.type];
     const parent = { name: b.parentName, language: b.language } as ParentProfile;
-    const routine = { type: b.type, name: b.name || placeholder, frequency: b.frequency, medicine: b.medicine ? ({ name: b.medicine.name, dose: b.medicine.dose } as Medicine) : null } as Routine & { medicine: Medicine | null };
-    const { session } = reminder(parent, routine, 'preview');
+    const routine = { type: b.type, name: b.name || placeholder, frequency: b.frequency, message: b.message || null, medicine: b.medicine ? ({ name: b.medicine.name, dose: b.medicine.dose } as Medicine) : null } as Routine & { medicine: Medicine | null };
+    const me = await prisma.user.findUniqueOrThrow({ where: { id: req.user.sub }, select: { name: true } });
+    const { session } = reminder(parent, routine, 'preview', me.name.trim().split(/\s+/)[0]);
     return { text: session.text, buttons: session.buttons?.map((x) => x.title) ?? [] };
   });
 
@@ -186,6 +189,7 @@ export async function careRoutes(app: FastifyInstance) {
   // ── Doctor visit report ──
   app.get<{ Params: { id: string }; Querystring: { from?: string; to?: string } }>('/parents/:id/doctor-report', async (req) => {
     await parentFor(req, req.params.id);
+    await requireFamily('report', { parentId: req.params.id });
     const date = /^\d{4}-\d{2}-\d{2}$/;
     return doctorReport(req.params.id, date.test(req.query.from ?? '') ? req.query.from : undefined, date.test(req.query.to ?? '') ? req.query.to : undefined);
   });

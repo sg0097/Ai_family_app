@@ -243,7 +243,24 @@ function medicineLabel(routine: RoutineWithMedicine): string {
   return detail && !routine.name.toLowerCase().includes(m.name.toLowerCase()) ? `${routine.name} (${detail})` : routine.name;
 }
 
-export function reminder(parent: ParentProfile, routine: RoutineWithMedicine, occurrenceId: string): Out {
+/**
+ * A reminder as the child sends it: in the child's own words if they wrote some, and always
+ * signed with their name, so the parent knows it comes from their child, not from an app.
+ */
+export function reminder(parent: ParentProfile, routine: RoutineWithMedicine, occurrenceId: string, family: string): Out {
+  const base = standardReminder(parent, routine, occurrenceId);
+  if (routine.message) {
+    return {
+      session: { text: signed(routine.message, family), buttons: base.session.buttons },
+      template: { name: 'child_reminder', language: TEMPLATE_LANG[parent.language], params: [family, routine.message], buttonPayloads: base.template.buttonPayloads },
+    };
+  }
+  return { session: { ...base.session, text: signed(base.session.text, family) }, template: { ...base.template, params: [...base.template.params, family] } };
+}
+
+const signed = (text: string, family: string) => (family ? `${text}\n— ${family}` : text);
+
+function standardReminder(parent: ParentProfile, routine: RoutineWithMedicine, occurrenceId: string): Out {
   const t = strings(parent.language);
   const n = parent.name;
   const lang = TEMPLATE_LANG[parent.language];
@@ -276,10 +293,10 @@ export function reminder(parent: ParentProfile, routine: RoutineWithMedicine, oc
 }
 
 /** The single follow-up when a reminder goes unanswered (or was answered "not yet"). Same buttons, softer words. */
-export function followUp(parent: ParentProfile, routine: RoutineWithMedicine, occurrenceId: string): Out {
+export function followUp(parent: ParentProfile, routine: RoutineWithMedicine, occurrenceId: string, family: string): Out {
   const t = strings(parent.language);
   const n = parent.name;
-  const base = reminder(parent, routine, occurrenceId);
+  const base = standardReminder(parent, routine, occurrenceId);
   const text: Record<Routine['type'], string> = {
     MEDICINE: t.fuMedicine(n, medicineLabel(routine)),
     WALK: t.fuWalk(n, routine.name),
@@ -289,8 +306,8 @@ export function followUp(parent: ParentProfile, routine: RoutineWithMedicine, oc
     WELLBEING: t.feel(n),
   };
   return {
-    session: { ...base.session, text: text[routine.type] },
-    template: { name: 'routine_followup', language: TEMPLATE_LANG[parent.language], params: [n, routine.name], buttonPayloads: base.template.buttonPayloads },
+    session: { ...base.session, text: signed(text[routine.type], family) },
+    template: { name: 'routine_followup', language: TEMPLATE_LANG[parent.language], params: [n, routine.name, family], buttonPayloads: base.template.buttonPayloads },
   };
 }
 

@@ -1,3 +1,4 @@
+import { useSession } from '../../App';
 import { MemoryCard } from '../../components/MemoryCard';
 import { VoiceLibrary } from '../../components/Voice';
 import { useState, type FormEvent } from 'react';
@@ -15,6 +16,7 @@ import { useParent } from './ParentDashboard';
 export function CarePage() {
   const { toast, show } = useToast();
   const { id, today } = useParent();
+  const { labs } = useSession();
   const p = today.parent;
   return (
     <div className="dash">
@@ -27,7 +29,7 @@ export function CarePage() {
         </div>
         <div className="dash-side">
           <VoiceLibrary parentId={id} parentName={p.name} notify={show} />
-          <MemoryCard parentId={id} parentName={p.name} timeZone={p.timezone} />
+          {labs && <MemoryCard parentId={id} parentName={p.name} timeZone={p.timezone} />}
         </div>
       </div>
       <Toast message={toast} />
@@ -167,7 +169,7 @@ function MedicineDialog({ parentId, parentName, medicine, onClose, onSaved }: { 
         <div><label className="field-label" htmlFor="md-ins">Instructions, as written by the doctor</label><input className="input" id="md-ins" value={f.instructions} onChange={set('instructions')} placeholder="after breakfast" /></div>
         <div><label className="field-label" htmlFor="md-dr">Prescribed by <span className="muted">(optional)</span></label><input className="input" id="md-dr" value={f.prescribedBy} onChange={set('prescribedBy')} placeholder="Dr. Mehta" /></div>
         <label className="row" style={{ gap: 10, cursor: 'pointer' }}>
-          <Switch on={f.track} label="Track tablets" onChange={(track) => setF({ ...f, track })} />
+          <Switch on={f.track} label="Count tablets" onChange={(track) => setF({ ...f, track })} />
           <span className="small">Count tablets and remind us before they run out</span>
         </label>
         {f.track && (

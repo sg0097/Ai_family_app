@@ -1,8 +1,24 @@
 # AI Family Care
 
-WhatsApp-first family care. Parents reply on WhatsApp; children see how they're doing on a calm web dashboard.
+For children living away from their parents: stay involved in their daily routine, remind them with love, and know how their day went. Parents reply on WhatsApp; children see the day on a web dashboard.
 
-This is the MVP vertical slice: child signup → add a parent → consent on WhatsApp → routine reminders → parent replies → records stored → today's status and a weekly summary on the dashboard.
+## What we're building on
+
+Parents forget, not because they don't care, but because no one reminds them. When their own child reminds them, it feels like affection, and they act on it. So this isn't a reminder app. It carries the child's affection through the day, and every design decision should protect that.
+
+**We say:** "For children living away from their parents. Stay involved in their daily routine, remind them with love, and know how their day went."
+
+**We never say:** that it improves a parent's health, that it "monitors", "tracks" or "keeps a check on" a parent, or anything like "AI doctor", "health insights" or "detects problems". Use "stay involved", never "keep a check": a parent who feels watched stops replying.
+
+Rules for the product:
+
+- **Claim only what works reliably.** If it isn't tested with real families, it isn't on the website.
+- **The child's affection is real.** Every reminder is signed with the child's name ("— Priya"). The child can write it in their own words (`Routine.message`) or record it in their own voice. The app only delivers it; it never pretends to be the child.
+- **Few features, each solid.** One failure breaks the parent's trust.
+- **Easy for the parent:** one tap or "haan". Nothing to learn.
+- **Support, don't replace.** The app gives the child reasons to call; it doesn't replace calling.
+
+**Version 1 runs without AI.** Reminders, button replies, simple replies like "haan" and readings like 130/80 (rules), Today, alerts and HELP, nudges, voice notes and the doctor report all work without a model. Features that depend on AI (free-text understanding by the model, "Ask about Mummy", noticed patterns) are behind `LABS=on` and stay off until they've been proven in Hinglish with real parents.
 
 ## Run it
 
@@ -104,7 +120,7 @@ The look is deliberate, so new screens should follow it (tokens at the top of `w
 - **Voice notes:** the child records up to a minute in the browser (Care → Your voice). A clip can play with any reminder, sent just before the text, or go with a check-in. Audio can only go inside WhatsApp's 24-hour window, so outside it the reminder goes as text only. Clips are stored in Postgres (≤ 1 MB each, 20 per parent); move them to object storage if that grows. **Before going live:** Chrome records WebM, which WhatsApp rejects, so add a conversion to OGG/Opus (e.g. ffmpeg) in `whatsapp/meta.ts`. Safari records MP4, which works as it is.
 - **Check-ins:** "Check in" on Today sends a short note from the child, with three one-tap answers (good, okay, not so good). The answer is stored as how they felt, and the family is told. At most 5 a day.
 - **Memory:** a deterministic worker (`care/memory.ts`, no AI) looks for patterns over 30 days: a symptom on 3 or more days, not feeling good on 3 or more days, the same words with a routine ("after breakfast"), and replies that usually come well after the reminder time. Each pattern carries its evidence. The family keeps or dismisses it, and dismissed ones never come back. Kept ones are given to Ask as facts.
-- **Plans:** Free covers everything safety-related (reminders, alerts, HELP, reports, medicines, doctor report). Family (₹199/month) adds voice notes, up to 4 parents, sharing with siblings and the 1 PM WhatsApp summary. New accounts get a 14-day trial. Parent features follow the plan of whoever added the parent. Payments aren't connected yet: in demo/dev, upgrading is simulated, and in live it says payments are coming (Razorpay is the next step).
+- **Plans:** Free: reminders (in your words, signed by you), one-tap replies, Today, this week's report, alerts and HELP, medicines, and the last 2 weeks of history. Family (₹199/month): reminders in your voice, nudges ("Say hi"), the doctor visit report, full history, up to 4 parents with siblings, and the 1 PM WhatsApp summary. New accounts get a 14-day trial. Parent features follow the plan of whoever added the parent. Payments aren't connected yet: in demo/dev, upgrading is simulated, and in live it says payments are coming (Razorpay is the next step).
 - **1 PM summary:** for people who turn it on (Family dashboard → alerts), a WhatsApp note at 1 PM parent time with what's done so far and what's still waiting.
 
 ## Safety and privacy rules
@@ -135,7 +151,7 @@ For real parents: set `APP_MODE=live`, `WHATSAPP_PROVIDER=meta` and the `META_*`
 
 1. Create a WhatsApp Business app in Meta, then set `WHATSAPP_PROVIDER=meta` and the `META_*` vars.
 2. Point the webhook to `https://<host>/api/webhooks/whatsapp` (signature-verified with `META_APP_SECRET`).
-3. Get these templates approved, in each language you offer (`en` for Hinglish, `hi`, `en_GB`): `consent_request`, `routine_confirm`, `routine_followup`, `reading_request`, `wellbeing_check`, `appointment_reminder`, `child_update`, `child_checkin`. Parameters and buttons are listed in `server/src/conversation/copy.ts`.
+3. Get these templates approved, in each language you offer (`en` for Hinglish, `hi`, `en_GB`): `consent_request`, `routine_confirm`, `routine_followup`, `reading_request`, `wellbeing_check`, `appointment_reminder`, `child_update`, `child_checkin`, `child_reminder`. Reminder and follow-up templates take the child's first name as their last parameter (the signature). Parameters and buttons are listed in `server/src/conversation/copy.ts`.
 
 In production, run the API and workers separately with `ROLE=api` / `ROLE=worker`.
 

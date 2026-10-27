@@ -20,6 +20,9 @@ const schema = z.object({
   META_APP_SECRET: z.string().optional(),
   META_VERIFY_TOKEN: z.string().optional(),
   META_TEMPLATE_LANGUAGE: z.string().default('en'),
+  // Features that depend on an AI model (free-text understanding, Ask, patterns). Off until
+  // they're proven with real parents in Hinglish; version 1 runs on rules and buttons only.
+  LABS: z.enum(['on', 'off']).default('off'),
   OLLAMA_URL: z.string().optional(),
   OLLAMA_MODEL: z.string().default('qwen3:8b'),
   ROLE: z.enum(['all', 'api', 'worker']).default('all'),
@@ -43,6 +46,7 @@ if (env.NODE_ENV === 'production') {
 /** The simulator and demo-data routes: local development, or an explicitly labelled hosted demo. */
 export const isDev = env.WHATSAPP_PROVIDER === 'fake' && (env.NODE_ENV !== 'production' || env.APP_MODE === 'demo');
 export const isDemo = env.APP_MODE === 'demo';
+export const labs = env.LABS === 'on';
 
 /** Base URL for links in emails. */
 export const appUrl = () => (env.APP_URL ?? env.WEB_ORIGIN).replace(/\/$/, '');

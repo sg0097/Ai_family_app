@@ -5,16 +5,20 @@ import { HttpError } from './http.js';
 export const TRIAL_DAYS = 14;
 export const FAMILY_PRICE_INR = 199;
 export const FREE_PARENTS = 1;
+export const FREE_HISTORY_DAYS = 14;
 export const FAMILY_PARENTS = 4;
 
-/** What the Family plan adds. Reminders, alerts, HELP, reports and records are free for everyone. */
-export type FamilyFeature = 'voice' | 'parents' | 'team' | 'midday';
+/** What the Family plan adds. Reminders, one-tap replies, Today, the weekly report and HELP are free for everyone. */
+export type FamilyFeature = 'voice' | 'parents' | 'team' | 'midday' | 'checkin' | 'report' | 'history';
 
 const FEATURE_NAME: Record<FamilyFeature, string> = {
   voice: 'Voice notes',
   parents: 'Caring for more than one parent',
   team: 'Sharing with family',
   midday: 'The 1 PM WhatsApp summary',
+  checkin: 'Sending a nudge',
+  report: 'The doctor visit report',
+  history: 'History older than two weeks',
 };
 
 type PlanUser = Pick<User, 'plan' | 'planRenewsAt' | 'trialEndsAt'>;
