@@ -5,7 +5,7 @@ const schema = z.object({
   // 'demo' = a hosted demo: simulated WhatsApp and the phone simulator, clearly labelled in the UI.
   APP_MODE: z.enum(['live', 'demo']).default('live'),
   DATABASE_URL: z.string(),
-  REDIS_URL: z.string().default('redis://localhost:6381'),
+  REDIS_URL: z.string().default('redis://localhost:6391'),
   PORT: z.coerce.number().default(4000),
   JWT_SECRET: z.string().min(1),
   WEB_ORIGIN: z.string().default('http://localhost:5180'),

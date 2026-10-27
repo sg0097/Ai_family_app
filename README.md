@@ -26,7 +26,7 @@ Needs Node 20+, Docker, and optionally [Ollama](https://ollama.com) with `qwen3:
 
 ```bash
 npm install
-npm run db:up                         # Postgres :5434, Redis :6381
+npm run db:up                         # Postgres :5444, Redis :6391
 cp server/.env.example server/.env    # first time only
 npm run db:migrate
 npm run dev                           # API :4200 + web :5180
