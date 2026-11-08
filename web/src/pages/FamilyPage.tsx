@@ -162,20 +162,11 @@ function AlertNumber() {
           <button type="submit" className="btn">{saved ? 'Saved ✓' : 'Save'}</button>
         </div>
       </div>
-      {!user?.phone && !saved && <p className="hint">Not set yet. Alerts will only show here, under the bell.</p>}
+      {!user?.phone && !saved && <p className="hint">Not set yet. The daily summary will only show here, under the bell.</p>}
       {user?.phone && (
         <label className="row" style={{ marginTop: 14, gap: 10, cursor: 'pointer' }}>
-          <Switch on={user.whatsappAlerts} label="Send not-done alerts to WhatsApp" onChange={async (v) => setUser(await api<User>('/me', { method: 'PATCH', body: { whatsappAlerts: v } }))} />
-          <span className="small">Also send “not done yet” alerts to WhatsApp <span className="muted">(HELP alerts always go)</span></span>
-        </label>
-      )}
-      {user?.phone && (
-        <label className="row" style={{ marginTop: 10, gap: 10, cursor: 'pointer' }}>
-          <Switch on={user.middaySummary} label="1 PM summary on WhatsApp" onChange={async (v) => {
-            setError('');
-            try { setUser(await api<User>('/me', { method: 'PATCH', body: { middaySummary: v } })); } catch (err) { setError((err as Error).message); }
-          }} />
-          <span className="small">A 1 PM note on how the day is going so far <span className="muted">(Family plan)</span></span>
+          <Switch on={user.whatsappAlerts} label="Send the daily summary to WhatsApp" onChange={async (v) => setUser(await api<User>('/me', { method: 'PATCH', body: { whatsappAlerts: v } }))} />
+          <span className="small">Also send the evening summary to WhatsApp <span className="muted">(HELP alerts always go)</span></span>
         </label>
       )}
       {error && <p className="error" style={{ marginTop: 8 }}>{error}</p>}

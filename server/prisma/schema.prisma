@@ -36,8 +36,9 @@ model User {
 }
 
 enum Plan {
-  FREE
-  FAMILY // ₹199 a month
+  FREE // no paid plan (trial ended or never paid)
+  BASIC // ₹100 per parent per month
+  PREMIUM // ₹149 per parent per month: voice, siblings, doctor report, full history
 }
 
 // Siblings and other family members who share a parent's dashboard and alerts.

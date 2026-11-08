@@ -1,5 +1,5 @@
 import { labs } from '../lib/env.js';
-import { FREE_HISTORY_DAYS, FREE_PARENTS, planOf, requireFamily } from '../lib/plan.js';
+import { FREE_HISTORY_DAYS, planOf, requirePremium } from '../lib/plan.js';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { DateTime } from 'luxon';
 import { z } from 'zod';
@@ -99,7 +99,7 @@ const parentBody = z.object({
 
 /** Weeks that start more than two weeks back are part of the Family plan's full history. */
 async function requireRecent(parentId: string, start?: string) {
-  if (start && start < DateTime.utc().minus({ days: FREE_HISTORY_DAYS + 6 }).toISODate()!) await requireFamily('history', { parentId });
+  if (start && start < DateTime.utc().minus({ days: FREE_HISTORY_DAYS + 6 }).toISODate()!) await requirePremium('history', { parentId });
 }
 
 export async function parentRoutes(app: FastifyInstance) {
@@ -153,7 +153,6 @@ export async function parentRoutes(app: FastifyInstance) {
     const me = await prisma.user.findUniqueOrThrow({ where: { id: req.user.sub }, include: { _count: { select: { parents: true } } } });
     const { maxParents } = planOf(me);
     if (me._count.parents >= maxParents) {
-      if (maxParents === FREE_PARENTS) await requireFamily('parents', { userId: me.id });
       return reply.code(409).send({ error: `You can care for up to ${maxParents} parents on one account` });
     }
     const parent = await prisma.parentProfile.create({
@@ -220,7 +219,7 @@ export async function parentRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string }; Querystring: { days?: string } }>('/parents/:id/trends', async (req) => {
     await ownParent(req, req.params.id);
     const days = [7, 14, 30, 90].includes(Number(req.query.days)) ? Number(req.query.days) : FREE_HISTORY_DAYS;
-    if (days > FREE_HISTORY_DAYS) await requireFamily('history', { parentId: req.params.id });
+    if (days > FREE_HISTORY_DAYS) await requirePremium('history', { parentId: req.params.id });
     return trends(req.params.id, days);
   });
 

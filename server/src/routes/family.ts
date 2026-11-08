@@ -8,7 +8,7 @@ import { prisma } from '../lib/db.js';
 import { isDemo, isDev, labs } from '../lib/env.js';
 import { HttpError, notFound } from '../lib/http.js';
 import { enqueueOutbound } from '../lib/queues.js';
-import { FAMILY_PRICE_INR, FREE_PARENTS, FAMILY_PARENTS, planOf, requireFamily } from '../lib/plan.js';
+import { planOf, requirePremium } from '../lib/plan.js';
 
 // Voice notes, check-ins, memory and the plan: the parts of care that carry the child's own voice.
 
@@ -53,7 +53,7 @@ export async function familyRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>('/parents/:id/voice', { bodyLimit: 2_000_000 }, async (req, reply) => {
     const parent = await parentFor(req, req.params.id);
-    await requireFamily('voice', { parentId: parent.id });
+    await requirePremium('voice', { parentId: parent.id });
     const body = clipBody.parse(req.body);
     const data = Buffer.from(body.data, 'base64');
     if (!data.length) throw new HttpError(400, 'That recording is empty');
@@ -82,7 +82,7 @@ export async function familyRoutes(app: FastifyInstance) {
     if (voiceClipId) {
       const clip = await clipFor(req, voiceClipId);
       if (clip.parentId !== routine.parentId) throw notFound();
-      await requireFamily('voice', { parentId: routine.parentId });
+      await requirePremium('voice', { parentId: routine.parentId });
     }
     await prisma.routine.update({ where: { id: routine.id }, data: { voiceClipId } });
     return { ok: true };
@@ -106,12 +106,12 @@ export async function familyRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>('/parents/:id/check-ins', { config: { rateLimit: { max: 20, timeWindow: '1 hour' } } }, async (req, reply) => {
     const parent = await parentFor(req, req.params.id);
     if (parent.consentStatus !== 'GRANTED') throw new HttpError(409, `${parent.name} hasn’t said yes on WhatsApp yet`);
-    await requireFamily('checkin', { parentId: parent.id });
+    await requirePremium('checkin', { parentId: parent.id });
     const body = checkInBody.parse(req.body);
     if (body.voiceClipId) {
       const clip = await clipFor(req, body.voiceClipId);
       if (clip.parentId !== parent.id) throw notFound();
-      await requireFamily('voice', { parentId: parent.id });
+      await requirePremium('voice', { parentId: parent.id });
     }
     const startOfDay = DateTime.utc().setZone(parent.timezone).startOf('day').toJSDate();
     if ((await prisma.checkIn.count({ where: { parentId: parent.id, createdAt: { gte: startOfDay } } })) >= MAX_CHECKINS_PER_DAY) {
@@ -140,26 +140,25 @@ export async function familyRoutes(app: FastifyInstance) {
   });
 
   // ── Plan ──
-  app.get('/plan', async (req) => {
-    const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user.sub } });
-    return { ...planOf(user), freeParents: FREE_PARENTS, familyParents: FAMILY_PARENTS, payments: isDemo || isDev ? 'demo' : 'unavailable' };
-  });
+  const planFor = async (userId: string) => {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    return planOf(user, new Date(), await prisma.parentProfile.count({ where: { userId } }));
+  };
 
-  // Payments (Razorpay) aren't connected yet. In the demo, upgrading is simulated and free.
+  app.get('/plan', async (req) => ({ ...(await planFor(req.user.sub)), payments: isDemo || isDev ? 'demo' : 'unavailable' }));
+
+  // Payments (Razorpay) aren't connected yet. In the demo, choosing a plan is simulated and free.
   app.post('/plan/upgrade', async (req) => {
     if (!isDemo && !isDev) throw new HttpError(503, 'Payments aren’t set up yet');
-    const user = await prisma.user.update({
-      where: { id: req.user.sub },
-      data: { plan: 'FAMILY', planRenewsAt: DateTime.utc().plus({ months: 1 }).toJSDate() },
-    });
-    return { ...planOf(user), priceInr: FAMILY_PRICE_INR };
+    const { plan } = z.object({ plan: z.enum(['BASIC', 'PREMIUM']) }).parse(req.body);
+    await prisma.user.update({ where: { id: req.user.sub }, data: { plan, planRenewsAt: DateTime.utc().plus({ months: 1 }).toJSDate() } });
+    return planFor(req.user.sub);
   });
 
-  // Demo only, like upgrading: back to the free plan straight away. Nothing already set up is
-  // deleted; Family features just stop accepting new things.
+  // Demo only, like upgrading. Nothing already set up is deleted; paid features just stop.
   app.post('/plan/cancel', async (req) => {
     if (!isDemo && !isDev) throw new HttpError(503, 'Payments aren’t set up yet');
-    const updated = await prisma.user.update({ where: { id: req.user.sub }, data: { plan: 'FREE', planRenewsAt: null, trialEndsAt: null } });
-    return planOf(updated);
+    await prisma.user.update({ where: { id: req.user.sub }, data: { plan: 'FREE', planRenewsAt: null, trialEndsAt: null } });
+    return planFor(req.user.sub);
   });
 }

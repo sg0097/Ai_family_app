@@ -13,11 +13,16 @@ export interface User {
 }
 
 export interface PlanInfo {
-  plan: 'FREE' | 'FAMILY';
-  family: boolean; // Family features open (paid or trial)
+  plan: 'FREE' | 'BASIC' | 'PREMIUM';
+  active: boolean; // reminders run (trial or paid)
+  premium: boolean; // Premium features open (Premium or trial)
+  trial: boolean;
   trialDaysLeft: number;
   renewsAt: string | null;
-  priceInr: number;
+  basicInr: number;
+  premiumInr: number;
+  parents: number;
+  monthlyInr: number;
   maxParents: number;
 }
 
@@ -93,7 +98,7 @@ export interface RoutineInput extends ScheduleFields, CareFields {
 
 export interface AppNotification {
   id: string;
-  kind: 'NOT_DONE' | 'RESOLVED' | 'SILENCE' | 'HELP' | 'REPORT' | 'SYMPTOM' | 'REFILL' | 'APPOINTMENT' | 'TEAM';
+  kind: 'NOT_DONE' | 'RESOLVED' | 'SILENCE' | 'HELP' | 'REPORT' | 'SYMPTOM' | 'REFILL' | 'APPOINTMENT' | 'TEAM' | 'DAILY';
   title: string;
   body: string;
   createdAt: string;

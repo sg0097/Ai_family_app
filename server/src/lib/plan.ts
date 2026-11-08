@@ -2,44 +2,56 @@ import type { User } from '@prisma/client';
 import { prisma } from './db.js';
 import { HttpError } from './http.js';
 
-export const TRIAL_DAYS = 14;
-export const FAMILY_PRICE_INR = 199;
-export const FREE_PARENTS = 1;
-export const FREE_HISTORY_DAYS = 14;
-export const FAMILY_PARENTS = 4;
+export const TRIAL_DAYS = 7;
+export const BASIC_PRICE_INR = 100; // per parent, per month
+export const PREMIUM_PRICE_INR = 149; // per parent, per month
+export const MAX_PARENTS = 6;
+export const BASIC_HISTORY_DAYS = 14;
+/** @deprecated name kept for the history checks: the history window on Basic. */
+export const FREE_HISTORY_DAYS = BASIC_HISTORY_DAYS;
 
-/** What the Family plan adds. Reminders, one-tap replies, Today, the weekly report and HELP are free for everyone. */
-export type FamilyFeature = 'voice' | 'parents' | 'team' | 'midday' | 'checkin' | 'report' | 'history';
+/**
+ * What Premium adds. Basic already has reminders in your words, one-tap replies, Today, the
+ * evening summary, HELP, the weekly report, medicines/refills and doctor visit reminders.
+ */
+export type PremiumFeature = 'voice' | 'team' | 'checkin' | 'report' | 'history';
 
-const FEATURE_NAME: Record<FamilyFeature, string> = {
-  voice: 'Voice notes',
-  parents: 'Caring for more than one parent',
-  team: 'Sharing with family',
-  midday: 'The 1 PM WhatsApp summary',
-  checkin: 'Sending a nudge',
+const FEATURE_NAME: Record<PremiumFeature, string> = {
+  voice: 'Reminders in your own voice',
+  team: 'Sharing with brothers and sisters',
+  checkin: 'Saying hi any time',
   report: 'The doctor visit report',
   history: 'History older than two weeks',
 };
 
 type PlanUser = Pick<User, 'plan' | 'planRenewsAt' | 'trialEndsAt'>;
 
-export function planOf(u: PlanUser, now = new Date()) {
-  const paid = u.plan === 'FAMILY' && (!u.planRenewsAt || u.planRenewsAt > now);
+export function planOf(u: PlanUser, now = new Date(), parents = 1) {
+  const paid = (u.plan === 'BASIC' || u.plan === 'PREMIUM') && (!u.planRenewsAt || u.planRenewsAt > now);
   const trial = !paid && !!u.trialEndsAt && u.trialEndsAt > now;
+  const plan = paid ? (u.plan as 'BASIC' | 'PREMIUM') : ('FREE' as const);
+  const perParent = plan === 'PREMIUM' ? PREMIUM_PRICE_INR : BASIC_PRICE_INR;
   return {
-    plan: paid ? ('FAMILY' as const) : ('FREE' as const),
-    family: paid || trial,
+    plan,
+    /** Reminders run: on trial or on a paid plan. */
+    active: paid || trial,
+    /** Premium features open: on trial or Premium. */
+    premium: plan === 'PREMIUM' || trial,
+    trial,
     trialDaysLeft: trial ? Math.ceil((u.trialEndsAt!.getTime() - now.getTime()) / 86_400_000) : 0,
     renewsAt: paid ? u.planRenewsAt : null,
-    priceInr: FAMILY_PRICE_INR,
-    maxParents: paid || trial ? FAMILY_PARENTS : FREE_PARENTS,
+    basicInr: BASIC_PRICE_INR,
+    premiumInr: PREMIUM_PRICE_INR,
+    parents,
+    monthlyInr: paid ? perParent * Math.max(parents, 1) : 0,
+    maxParents: MAX_PARENTS,
   };
 }
 
-/** Parent-scoped features follow the plan of whoever added the parent, so siblings share it. */
-export async function requireFamily(feature: FamilyFeature, by: { userId?: string; parentId?: string }) {
+/** Premium features follow the plan of whoever added the parent, so siblings share it. */
+export async function requirePremium(feature: PremiumFeature, by: { userId?: string; parentId?: string }) {
   const user = by.parentId
     ? (await prisma.parentProfile.findUniqueOrThrow({ where: { id: by.parentId }, include: { user: true } })).user
     : await prisma.user.findUniqueOrThrow({ where: { id: by.userId! } });
-  if (!planOf(user).family) throw new HttpError(402, `${FEATURE_NAME[feature]} is part of the Family plan (₹${FAMILY_PRICE_INR}/month)`);
+  if (!planOf(user).premium) throw new HttpError(402, `${FEATURE_NAME[feature]} is part of the Premium plan (₹${PREMIUM_PRICE_INR} per parent a month)`);
 }

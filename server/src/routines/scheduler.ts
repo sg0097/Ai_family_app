@@ -6,6 +6,7 @@ import { reminder } from '../conversation/copy.js';
 import { runCareRules } from '../care/rules.js';
 import { HttpError } from '../lib/http.js';
 import { isDueOn } from './schedule.js';
+import { planOf } from '../lib/plan.js';
 
 /** Don't send a reminder that is this late (e.g. a routine created at 11:00 for 08:00 starts tomorrow). */
 const STALE_AFTER_MINUTES = 120;
@@ -20,10 +21,11 @@ const STALE_AFTER_MINUTES = 120;
 export async function tick(now: DateTime = DateTime.utc()) {
   const parents = await prisma.parentProfile.findMany({
     where: { consentStatus: 'GRANTED' },
-    include: { routines: { where: { active: true } } },
+    include: { routines: { where: { active: true } }, user: true },
   });
 
-  for (const parent of parents) {
+  // After the 7-day trial, reminders only run for accounts that pay (each message costs money).
+  for (const parent of parents.filter((p) => planOf(p.user, now.toJSDate()).active)) {
     const local = now.setZone(parent.timezone);
     const today = local.toISODate()!;
 
@@ -39,7 +41,7 @@ export async function tick(now: DateTime = DateTime.utc()) {
     where: {
       status: 'SCHEDULED',
       scheduledFor: { lte: now.toJSDate(), gte: now.minus({ minutes: STALE_AFTER_MINUTES }).toJSDate() },
-      parent: { consentStatus: 'GRANTED' },
+      parent: { consentStatus: 'GRANTED', user: { OR: [{ plan: { in: ['BASIC', 'PREMIUM'] }, OR: [{ planRenewsAt: null }, { planRenewsAt: { gt: now.toJSDate() } }] }, { trialEndsAt: { gt: now.toJSDate() } }] } },
       routine: { active: true },
     },
     include: { routine: { include: { medicine: true } }, parent: true },

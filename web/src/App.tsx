@@ -162,10 +162,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="side-bottom">
           {plan && (
-            <Link to="/app/plan" className={`side-plan${plan.plan === 'FAMILY' ? ' paid' : ''}`}>
-              <b>{plan.plan === 'FAMILY' ? 'Family plan' : plan.trialDaysLeft ? `Family trial · ${plan.trialDaysLeft} days left` : 'Free plan'}</b>
-              <span>{plan.plan === 'FAMILY' ? 'Voice notes, 4 parents, siblings' : 'Your voice in reminders, siblings, 4 parents'}</span>
-              <em>{plan.plan === 'FAMILY' ? 'Manage' : 'See plans'} →</em>
+            <Link to="/app/plan" className={`side-plan${plan.plan !== 'FREE' ? ' paid' : ''}`}>
+              <b>{plan.plan === 'PREMIUM' ? 'Premium' : plan.plan === 'BASIC' ? 'Basic' : plan.trial ? `Free trial · ${plan.trialDaysLeft} day${plan.trialDaysLeft === 1 ? '' : 's'} left` : 'Trial ended · reminders paused'}</b>
+              <span>{plan.plan === 'PREMIUM' ? 'Voice notes, siblings, full history' : plan.plan === 'BASIC' ? 'Upgrade for your voice in reminders' : plan.trial ? 'Choose a plan to keep reminders going' : 'Choose a plan to start them again'}</span>
+              <em>{plan.plan === 'FREE' ? 'Choose a plan' : 'Manage'} →</em>
             </Link>
           )}
           <div className="menu side-user">

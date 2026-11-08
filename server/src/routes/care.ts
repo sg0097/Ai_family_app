@@ -6,7 +6,7 @@ import { daysLeft } from '../care/refill.js';
 import { consentRequest, reminder } from '../conversation/copy.js';
 import { doctorReport } from '../insights/doctorReport.js';
 import { accessibleBy } from '../lib/access.js';
-import { requireFamily } from '../lib/plan.js';
+import { requirePremium } from '../lib/plan.js';
 import { prisma } from '../lib/db.js';
 import { HttpError, notFound } from '../lib/http.js';
 
@@ -189,7 +189,7 @@ export async function careRoutes(app: FastifyInstance) {
   // ── Doctor visit report ──
   app.get<{ Params: { id: string }; Querystring: { from?: string; to?: string } }>('/parents/:id/doctor-report', async (req) => {
     await parentFor(req, req.params.id);
-    await requireFamily('report', { parentId: req.params.id });
+    await requirePremium('report', { parentId: req.params.id });
     const date = /^\d{4}-\d{2}-\d{2}$/;
     return doctorReport(req.params.id, date.test(req.query.from ?? '') ? req.query.from : undefined, date.test(req.query.to ?? '') ? req.query.to : undefined);
   });

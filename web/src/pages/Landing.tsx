@@ -330,23 +330,23 @@ export function Landing() {
 
       <section className="section" id="pricing" style={{ paddingTop: 0 }}>
         <div className="st-center">
-          <h2 className="st-h2">Start <Chip icon="check" tone="green" /> free.<br /><span className="st-grey"><Chip icon="calendar" tone="black" /> 14 days of Family on us.</span></h2>
-          <p className="st-lede">Daily reminders, replies and alerts are free, always.</p>
+          <h2 className="st-h2">Try it <Chip icon="check" tone="green" /> free.<br /><span className="st-grey"><Chip icon="calendar" tone="black" /> 7 days free, then from ₹100.</span></h2>
+          <p className="st-lede">Everything, voice included, is open for 7 days. No card needed. After that, ₹100 a month per parent, or ₹149 with your voice.</p>
         </div>
         <div className="st-plans">
           <div className="st-plan">
-            <h3>Free</h3>
-            <div className="who">For one parent.</div>
-            <div className="price">₹0<small>forever</small></div>
-            <Link to={start} className="btn">Start free</Link>
-            <ul>{['Reminders in your words, signed by you', 'One-tap replies', 'Today and this week at a glance', 'Alerts and HELP'].map((f) => <li key={f}><Icon name="check" size={15} /> {f}</li>)}</ul>
+            <h3>Basic</h3>
+            <div className="who">Her day, every day.</div>
+            <div className="price">₹100<small>per parent / month</small></div>
+            <Link to={start} className="btn">Try free for 7 days</Link>
+            <ul>{['Reminders in your words, signed by you', 'One-tap replies, or just “haan”', 'One evening note: “4 of 5 done today”', 'HELP reaches you at once', 'Medicines, refills, doctor visit reminders'].map((f) => <li key={f}><Icon name="check" size={15} /> {f}</li>)}</ul>
           </div>
           <div className="st-plan">
-            <h3>Family</h3>
-            <div className="who">For the whole family.</div>
-            <div className="price">₹199<small>a month</small></div>
-            <Link to={start} className="btn">Try free for 14 days</Link>
-            <ul>{['Everything in Free', 'Reminders in your own voice', 'Say hi any time', 'Doctor visit report and full history', 'Up to 4 parents, with siblings'].map((f) => <li key={f}><Icon name="check" size={15} /> {f}</li>)}</ul>
+            <h3>Premium</h3>
+            <div className="who">Your voice in her day.</div>
+            <div className="price">₹149<small>per parent / month</small></div>
+            <Link to={start} className="btn">Try free for 7 days</Link>
+            <ul>{['Everything in Basic', 'Reminders in your own voice', 'Say hi any time, in your voice', 'Brothers and sisters share one view', 'Doctor visit report and full history'].map((f) => <li key={f}><Icon name="check" size={15} /> {f}</li>)}</ul>
           </div>
         </div>
       </section>

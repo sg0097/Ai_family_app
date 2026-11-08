@@ -1,5 +1,5 @@
 import type { User } from '@prisma/client';
-import { TRIAL_DAYS, planOf, requireFamily } from '../lib/plan.js';
+import { TRIAL_DAYS, planOf } from '../lib/plan.js';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
@@ -20,7 +20,7 @@ const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 
 const DUMMY_HASH = '0000000000000000:' + '0'.repeat(128);
 
-const publicUser = (u: User) => ({ id: u.id, name: u.name, email: u.email, phone: u.phone, whatsappAlerts: u.whatsappAlerts, middaySummary: u.middaySummary, timezone: u.timezone, plan: planOf(u) });
+const publicUser = async (u: User) => ({ id: u.id, name: u.name, email: u.email, phone: u.phone, whatsappAlerts: u.whatsappAlerts, middaySummary: u.middaySummary, timezone: u.timezone, plan: planOf(u, new Date(), await prisma.parentProfile.count({ where: { userId: u.id } })) });
 
 export async function authRoutes(app: FastifyInstance) {
   const issue = (u: { id: string; tokenVersion: number }) => app.jwt.sign({ sub: u.id, v: u.tokenVersion }, { expiresIn: '30d' });
@@ -32,7 +32,7 @@ export async function authRoutes(app: FastifyInstance) {
     const body = signupBody.parse(req.body);
     if (await prisma.user.findUnique({ where: { email: body.email } })) return reply.code(409).send({ error: 'An account with this email already exists' });
     const user = await prisma.user.create({ data: { name: body.name, email: body.email, passwordHash: await hashPassword(body.password), timezone: body.timezone, trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 86_400_000) } });
-    return { token: issue(user), user: publicUser(user) };
+    return { token: issue(user), user: await publicUser(user) };
   });
 
   app.post('/auth/login', limited, async (req, reply) => {
@@ -41,7 +41,7 @@ export async function authRoutes(app: FastifyInstance) {
     // Hash even for unknown emails so response time doesn't reveal who has an account.
     const ok = await verifyPassword(body.password, user?.passwordHash ?? DUMMY_HASH);
     if (!user || !ok) return reply.code(401).send({ error: 'Wrong email or password' });
-    return { token: issue(user), user: publicUser(user) };
+    return { token: issue(user), user: await publicUser(user) };
   });
 
   /** Always answers the same way, so it can't be used to find out who has an account. */
@@ -71,11 +71,11 @@ export async function authRoutes(app: FastifyInstance) {
       // New password, and every older session is signed out.
       return tx.user.update({ where: { id: reset.userId }, data: { passwordHash: await hashPassword(password), tokenVersion: { increment: 1 } } });
     });
-    return { token: issue(user), user: publicUser(user) };
+    return { token: issue(user), user: await publicUser(user) };
   });
 
   app.get('/me', { preHandler: app.authenticate }, async (req) => {
-    return publicUser(await prisma.user.findUniqueOrThrow({ where: { id: req.user.sub } }));
+    return await publicUser(await prisma.user.findUniqueOrThrow({ where: { id: req.user.sub } }));
   });
 
   /** Delete the account and every parent and record in it. Needs the password. */
@@ -91,7 +91,6 @@ export async function authRoutes(app: FastifyInstance) {
     const body = meBody.parse(req.body);
     const phone = body.phone ? normalizePhone(body.phone) : body.phone;
     if (body.phone && !phone) return reply.code(400).send({ error: 'Enter a valid phone number' });
-    if (body.middaySummary) await requireFamily('midday', { userId: req.user.sub });
-    return publicUser(await prisma.user.update({ where: { id: req.user.sub }, data: { name: body.name, phone, whatsappAlerts: body.whatsappAlerts, middaySummary: body.middaySummary, timezone: body.timezone } }));
+    return await publicUser(await prisma.user.update({ where: { id: req.user.sub }, data: { name: body.name, phone, whatsappAlerts: body.whatsappAlerts, middaySummary: body.middaySummary, timezone: body.timezone } }));
   });
 }

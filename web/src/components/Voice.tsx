@@ -164,7 +164,7 @@ export function VoiceRecorder({ parentId, parentName, onSaved }: { parentId: str
           </div>
         </div>
       )}
-      {error && <p className="error small" style={{ marginTop: 8 }}>{error.text}{error.plan && <> · <Link to="/app/plan">See the Family plan</Link></>}</p>}
+      {error && <p className="error small" style={{ marginTop: 8 }}>{error.text}{error.plan && <> · <Link to="/app/plan">See Premium</Link></>}</p>}
     </div>
   );
 }
