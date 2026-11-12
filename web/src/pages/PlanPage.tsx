@@ -7,7 +7,23 @@ import { fmtDate } from '../format';
 import { useApi } from '../hooks';
 import type { PlanInfo, User } from '../types';
 
-type Plan = PlanInfo & { payments: 'demo' | 'unavailable' };
+type Plan = PlanInfo & { payments: 'razorpay' | 'demo' | 'unavailable'; razorpayKeyId: string | null };
+
+interface RazorpayResult { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }
+declare global {
+  interface Window { Razorpay?: new (o: Record<string, unknown>) => { open(): void; on(e: string, f: (r: unknown) => void): void } }
+}
+
+function loadCheckout(): Promise<boolean> {
+  if (window.Razorpay) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const el = document.createElement('script');
+    el.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    el.onload = () => resolve(true);
+    el.onerror = () => resolve(false);
+    document.body.appendChild(el);
+  });
+}
 type Tier = 'BASIC' | 'PREMIUM';
 
 const BASIC = [
@@ -27,10 +43,46 @@ const PREMIUM = [
 ];
 
 export function PlanPage() {
-  const { setUser } = useSession();
+  const { user, setUser } = useSession();
   const { data, reload } = useApi<Plan>('/plan');
   const [busy, setBusy] = useState<string>('');
   const [error, setError] = useState('');
+
+  async function pay(plan: Tier) {
+    setBusy(plan);
+    setError('');
+    try {
+      if (!(await loadCheckout())) throw new Error('Couldn’t load the payment window. Check your internet and try again.');
+      const o = await api<{ orderId: string; amount: number; currency: string; keyId: string }>('/plan/checkout', { method: 'POST', body: { plan } });
+      const rz = new window.Razorpay!({
+        key: o.keyId,
+        order_id: o.orderId,
+        amount: o.amount,
+        currency: o.currency,
+        name: 'Family Care',
+        description: `${plan === 'PREMIUM' ? 'Premium' : 'Basic'} · 1 month`,
+        prefill: { email: user?.email, name: user?.name },
+        theme: { color: '#111111' },
+        modal: { ondismiss: () => setBusy('') },
+        handler: async (r: RazorpayResult) => {
+          try {
+            await api('/plan/verify', { method: 'POST', body: { orderId: r.razorpay_order_id, paymentId: r.razorpay_payment_id, signature: r.razorpay_signature } });
+            reload();
+            setUser(await api<User>('/me'));
+          } catch (e) {
+            setError(`${(e as Error).message}. If money was taken, it will show here within a few minutes.`);
+          } finally {
+            setBusy('');
+          }
+        },
+      });
+      rz.on('payment.failed', () => { setError('The payment didn’t go through. Nothing was charged. Please try again.'); setBusy(''); });
+      rz.open();
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy('');
+    }
+  }
 
   async function change(to: 'upgrade' | 'cancel', plan?: Tier) {
     setBusy(plan ?? to);
@@ -51,9 +103,9 @@ export function PlanPage() {
   const total = (per: number) => `₹${per * n} a month for ${n} parent${n === 1 ? '' : 's'}`;
   const action = (tier: Tier) => {
     if (data.plan === tier) return <span className="pill">Your plan</span>;
-    if (data.payments !== 'demo') return <button className="btn" disabled>Coming soon</button>;
+    if (data.payments === 'unavailable') return <button className="btn" disabled>Coming soon</button>;
     const label = data.plan === 'PREMIUM' && tier === 'BASIC' ? 'Switch to Basic' : data.plan === 'FREE' ? `Choose ${tier === 'BASIC' ? 'Basic' : 'Premium'}` : 'Upgrade to Premium';
-    return <button className={tier === 'PREMIUM' ? 'btn' : 'btn quiet'} disabled={!!busy} onClick={() => change('upgrade', tier)}>{busy === tier ? 'One moment…' : label}</button>;
+    return <button className={tier === 'PREMIUM' ? 'btn' : 'btn quiet'} disabled={!!busy} onClick={() => (data.payments === 'razorpay' ? pay(tier) : change('upgrade', tier))}>{busy === tier ? 'One moment…' : data.payments === 'razorpay' ? `${label} · ₹${(tier === 'PREMIUM' ? data.premiumInr : data.basicInr) * Math.max(data.parents, 1)}` : label}</button>;
   };
 
   return (
@@ -90,6 +142,7 @@ export function PlanPage() {
       {data.plan !== 'FREE' && data.payments === 'demo' && (
         <p style={{ marginTop: 12 }}><button className="link-btn small" disabled={!!busy} onClick={() => change('cancel')}>Stop my plan</button></p>
       )}
+      {data.payments === 'razorpay' && <p className="tiny" style={{ marginTop: 12 }}>Pay by UPI, card or net banking, one month at a time. Nothing renews by itself. Your evening note tells you three days before it ends.</p>}
       {data.payments === 'demo' && <p className="tiny" style={{ marginTop: 12 }}>Demo: no payment is taken. Real payments (Razorpay, UPI) arrive with the live launch.</p>}
       {error && <p className="error" style={{ marginTop: 12 }}>{error}</p>}
     </div>

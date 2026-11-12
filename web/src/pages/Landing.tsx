@@ -377,7 +377,7 @@ export function Landing() {
 
       <footer className="st-foot">
         <Logo />
-        <span>Not a medical service. In an emergency, call 112.</span>
+        <span>Not a medical service. In an emergency, call 112. · <Link to="/privacy">Privacy</Link> · <Link to="/terms">Terms</Link></span>
       </footer>
       <div className="st-word" aria-hidden>ghar ki khabar</div>
     </div>

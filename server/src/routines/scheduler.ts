@@ -25,7 +25,7 @@ export async function tick(now: DateTime = DateTime.utc()) {
   });
 
   // After the 7-day trial, reminders only run for accounts that pay (each message costs money).
-  for (const parent of parents.filter((p) => planOf(p.user, now.toJSDate()).active)) {
+  for (const parent of parents.filter((p) => !p.user.suspended && planOf(p.user, now.toJSDate()).active)) {
     const local = now.setZone(parent.timezone);
     const today = local.toISODate()!;
 

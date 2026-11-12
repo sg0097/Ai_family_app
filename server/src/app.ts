@@ -4,6 +4,7 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
 import { prisma } from './lib/db.js';
+import { HttpError } from './lib/http.js';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import fastifyStatic from '@fastify/static';
@@ -15,6 +16,7 @@ import { teamRoutes } from './routes/team.js';
 import { careRoutes } from './routes/care.js';
 import { familyRoutes } from './routes/family.js';
 import { webhookRoutes } from './routes/webhooks.js';
+import { adminRoutes } from './routes/admin.js';
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
@@ -44,8 +46,8 @@ export async function buildApp() {
       return reply.code(401).send({ error: 'Please sign in' });
     }
     // A deleted account, or a session from before a password reset, is signed out.
-    const user = await prisma.user.findUnique({ where: { id: req.user.sub }, select: { tokenVersion: true } });
-    if (!user || user.tokenVersion !== (req.user.v ?? 0)) {
+    const user = await prisma.user.findUnique({ where: { id: req.user.sub }, select: { tokenVersion: true, suspended: true } });
+    if (!user || user.suspended || user.tokenVersion !== (req.user.v ?? 0)) {
       return reply.code(401).send({ error: 'Please sign in' });
     }
   });
@@ -54,7 +56,8 @@ export async function buildApp() {
     if (err instanceof ZodError) return reply.code(400).send({ error: err.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') });
     const status = (err as { statusCode?: number }).statusCode ?? 500;
     if (status >= 500) app.log.error(err);
-    return reply.code(status).send({ error: status >= 500 ? 'Something went wrong' : err.message });
+    // Our own HttpError messages are written for people; anything else on a 5xx stays generic.
+    return reply.code(status).send({ error: status >= 500 && !(err instanceof HttpError) ? 'Something went wrong' : err.message });
   });
 
   await app.register(
@@ -66,6 +69,10 @@ export async function buildApp() {
       await api.register(careRoutes);
       await api.register(familyRoutes);
       await api.register(webhookRoutes);
+      await api.register(async (a) => {
+        a.addHook('onRequest', app.authenticate);
+        await a.register(adminRoutes);
+      });
       if (isDev) await api.register(devRoutes);
     },
     { prefix: '/api' },

@@ -10,6 +10,8 @@ import { ForgotPage, InvitePage, ResetPage } from './pages/AccountPages';
 import { AuthPage } from './pages/AuthPage';
 import { FamilyPage } from './pages/FamilyPage';
 import { Landing } from './pages/Landing';
+import { AdminPage } from './pages/AdminPage';
+import { Privacy, Terms } from './pages/Legal';
 import { PlanPage } from './pages/PlanPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { ParentDashboard } from './pages/parent/ParentDashboard';
@@ -90,6 +92,9 @@ export function App() {
         <Route path="/forgot" element={<ForgotPage />} />
         <Route path="/reset/:token" element={<ResetPage />} />
         <Route path="/invite/:token" element={<InvitePage />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/app/admin" element={guard(<AdminPage />)} />
         <Route path="/app" element={guard(<FamilyPage />)} />
         <Route path="/app/new" element={guard(<OnboardingPage />)} />
         <Route path="/app/plan" element={guard(<PlanPage />)} />

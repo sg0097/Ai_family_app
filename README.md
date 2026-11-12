@@ -158,3 +158,23 @@ In production, run the API and workers separately with `ROLE=api` / `ROLE=worker
 ## Not built yet
 
 LLM-written summaries, real payments (Razorpay), WebM → OGG conversion for live voice notes, and real WhatsApp (the Meta adapter has never run against Meta). Phone simulator stays until real WhatsApp is connected.
+
+
+## Launch checklist
+
+Everything below the line "Code" is built and tested; the rest needs your accounts. Secrets go in the host's environment settings (or `server/.env` locally), never in chat or git.
+
+**Code (done)**
+- 7-day trial, Basic ₹100 and Premium ₹149 per parent; reminders stop when a plan ends.
+- One evening summary to the child; HELP and serious symptoms are the only interruptions.
+- Razorpay Checkout (UPI, cards): signed verification plus a webhook backup, one month per payment, idempotent activation.
+- WhatsApp: inbound parsing, signature check, delivery receipts, voice notes converted from WebM to OGG/Opus (ffmpeg).
+- Admin console at `/app/admin` (users, tiers, delivery failures, queue health, comp a plan, suspend). Needs `ADMIN_EMAILS`.
+- Privacy and Terms pages, consent line at signup.
+
+**You (needs your accounts)**
+1. **Meta WhatsApp:** business account, a number, and approved templates (in each language you offer: Hinglish/Hindi/English): `consent_request`, `routine_confirm`, `child_reminder`, `routine_followup`, `reading_request`, `wellbeing_check`, `appointment_reminder`, `child_checkin`, and `child_update` (for the child's evening note). Wording lives in `server/src/conversation/copy.ts`. Set `WHATSAPP_PROVIDER=meta`, `META_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN`; point the webhook at `/api/webhooks/whatsapp`.
+2. **Razorpay:** a live account, then set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`; add a webhook to `/api/webhooks/razorpay` for `payment.captured` and `payment.failed`.
+3. **Email:** a Resend key and a verified sender domain (`EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `EMAIL_FROM`).
+4. **Support address:** replace `SUPPORT_EMAIL` in `web/src/pages/Legal.tsx`, and have the Terms and Privacy read by someone qualified.
+5. **Hosting:** a paid always-on service (the free tier sleeps and pauses reminders), `APP_MODE=live`, a strong `JWT_SECRET`, `ADMIN_EMAILS`, and database backups.

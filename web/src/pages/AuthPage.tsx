@@ -79,7 +79,8 @@ export function AuthPage({ mode }: { mode: 'signup' | 'login' }) {
             {mode === 'signup' ? <p className="hint">At least 8 characters.</p> : <p className="hint"><Link to="/forgot" className="link-btn">Forgot password?</Link></p>}
           </div>
           {error && <p className="error" style={{ marginTop: 14 }}>{error}</p>}
-          <button type="submit" className="btn lg" disabled={busy} style={{ width: '100%', marginTop: 22 }}>
+          {mode === 'signup' && <p className="hint" style={{ marginTop: 14 }}>By creating an account you agree to the <Link to="/terms" className="link-btn">Terms</Link> and <Link to="/privacy" className="link-btn">Privacy</Link> page, and that your parent has agreed to receive messages.</p>}
+          <button type="submit" className="btn lg" disabled={busy} style={{ width: '100%', marginTop: 12 }}>
             {busy ? 'One moment…' : mode === 'signup' ? 'Create account' : 'Sign in'}
           </button>
           <p className="muted small" style={{ marginTop: 18, textAlign: 'center' }}>

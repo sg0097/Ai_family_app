@@ -109,14 +109,18 @@ export async function dailySummaries(now: DateTime): Promise<number> {
     });
     if (!occs.length) continue;
     const done = occs.filter((o) => o.status === 'DONE');
-    const left = occs.filter((o) => o.status !== 'DONE').map((o) => o.routine.name);
+    const notDone = occs.filter((o) => o.status !== 'DONE').map((o) => o.routine.name);
 
-    const lines = [left.length ? `Not done: ${left.join(', ')}.` : 'Everything was done. A nice day.'];
+    const lines = [notDone.length ? `Not done: ${notDone.join(', ')}.` : 'Everything was done. A nice day.'];
     const meds = await prisma.medicine.findMany({ where: { parentId: p.id, active: true, pillsLeft: { not: null } }, include: { routines: true } });
     for (const m of meds) {
       const days = daysLeft(m, m.routines);
       if (days != null && days <= m.refillAlertDays) lines.push(`${m.name} is running low (${days === 0 ? 'none left' : `about ${days} day${days === 1 ? '' : 's'} left`}).`);
     }
+    const owner = await prisma.user.findUnique({ where: { id: p.userId }, select: { plan: true, planRenewsAt: true, trialEndsAt: true } });
+    const ends = owner && (owner.plan === 'FREE' ? owner.trialEndsAt : owner.planRenewsAt);
+    const left = ends ? Math.ceil((ends.getTime() - now.toMillis()) / 86_400_000) : null;
+    if (left != null && left >= 0 && left <= 3) lines.push(`Your ${owner!.plan === 'FREE' ? 'free trial' : 'plan'} ends ${left === 0 ? 'today' : left === 1 ? 'tomorrow' : `in ${left} days`}. Renew on the Plans page so ${p.name}’s reminders keep going.`);
     const tomorrow = local.plus({ days: 1 });
     const appts = await prisma.appointment.findMany({ where: { parentId: p.id, status: 'UPCOMING', at: { gte: tomorrow.startOf('day').toJSDate(), lte: tomorrow.endOf('day').toJSDate() } } });
     for (const a of appts) lines.push(`Tomorrow: ${a.title} at ${DateTime.fromJSDate(a.at).setZone(p.timezone).toFormat('h:mm a')}.`);

@@ -5,10 +5,12 @@ import { refreshMemory } from '../care/memory.js';
 import { checkIn, strings } from '../conversation/copy.js';
 import { accessibleBy } from '../lib/access.js';
 import { prisma } from '../lib/db.js';
-import { isDemo, isDev, labs } from '../lib/env.js';
+import { env, isDemo, isDev, labs, razorpayOn } from '../lib/env.js';
 import { HttpError, notFound } from '../lib/http.js';
 import { enqueueOutbound } from '../lib/queues.js';
 import { planOf, requirePremium } from '../lib/plan.js';
+import { activatePayment, amountPaise } from '../lib/billing.js';
+import { createOrder, verifyCheckoutSignature } from '../lib/razorpay.js';
 
 // Voice notes, check-ins, memory and the plan: the parts of care that carry the child's own voice.
 
@@ -145,11 +147,39 @@ export async function familyRoutes(app: FastifyInstance) {
     return planOf(user, new Date(), await prisma.parentProfile.count({ where: { userId } }));
   };
 
-  app.get('/plan', async (req) => ({ ...(await planFor(req.user.sub)), payments: isDemo || isDev ? 'demo' : 'unavailable' }));
+  app.get('/plan', async (req) => ({ ...(await planFor(req.user.sub)), payments: razorpayOn ? 'razorpay' : isDemo || isDev ? 'demo' : 'unavailable', razorpayKeyId: razorpayOn ? env.RAZORPAY_KEY_ID : null }));
+
+  // Real payment: create a Razorpay order; the browser opens Checkout (UPI, cards) with it.
+  app.post('/plan/checkout', { config: { rateLimit: { max: 20, timeWindow: '1 hour' } } }, async (req) => {
+    if (!razorpayOn) throw new HttpError(503, 'Payments aren’t set up yet');
+    const { plan } = z.object({ plan: z.enum(['BASIC', 'PREMIUM']) }).parse(req.body);
+    const parents = Math.max(await prisma.parentProfile.count({ where: { userId: req.user.sub } }), 1);
+    const amount = amountPaise(plan, parents);
+    const row = await prisma.payment.create({ data: { userId: req.user.sub, plan, parents, amountPaise: amount, orderId: `pending_${Date.now()}_${Math.random()}` } });
+    try {
+      const order = await createOrder(amount, row.id);
+      await prisma.payment.update({ where: { id: row.id }, data: { orderId: order.id } });
+      return { orderId: order.id, amount, currency: 'INR', keyId: env.RAZORPAY_KEY_ID, plan, parents };
+    } catch (err) {
+      await prisma.payment.update({ where: { id: row.id }, data: { status: 'FAILED' } });
+      req.log.error(err);
+      throw new HttpError(502, 'Couldn’t start the payment. Please try again.');
+    }
+  });
+
+  // The browser reports a finished payment; trust only a correctly signed one.
+  app.post('/plan/verify', async (req) => {
+    const b = z.object({ orderId: z.string(), paymentId: z.string(), signature: z.string() }).parse(req.body);
+    const pay = await prisma.payment.findUnique({ where: { orderId: b.orderId } });
+    if (!pay || pay.userId !== req.user.sub) throw new HttpError(404, 'Payment not found');
+    if (!verifyCheckoutSignature(b.orderId, b.paymentId, b.signature)) throw new HttpError(400, 'Payment could not be verified');
+    await activatePayment(b.orderId, b.paymentId);
+    return planFor(req.user.sub);
+  });
 
   // Payments (Razorpay) aren't connected yet. In the demo, choosing a plan is simulated and free.
   app.post('/plan/upgrade', async (req) => {
-    if (!isDemo && !isDev) throw new HttpError(503, 'Payments aren’t set up yet');
+    if (razorpayOn || (!isDemo && !isDev)) throw new HttpError(503, 'Use the payment page to choose a plan');
     const { plan } = z.object({ plan: z.enum(['BASIC', 'PREMIUM']) }).parse(req.body);
     await prisma.user.update({ where: { id: req.user.sub }, data: { plan, planRenewsAt: DateTime.utc().plus({ months: 1 }).toJSDate() } });
     return planFor(req.user.sub);
@@ -157,6 +187,8 @@ export async function familyRoutes(app: FastifyInstance) {
 
   // Demo only, like upgrading. Nothing already set up is deleted; paid features just stop.
   app.post('/plan/cancel', async (req) => {
+    // With real payments nothing renews by itself: a plan simply ends on its date.
+    if (razorpayOn) return planFor(req.user.sub);
     if (!isDemo && !isDev) throw new HttpError(503, 'Payments aren’t set up yet');
     await prisma.user.update({ where: { id: req.user.sub }, data: { plan: 'FREE', planRenewsAt: null, trialEndsAt: null } });
     return planFor(req.user.sub);

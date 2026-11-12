@@ -25,6 +25,12 @@ const schema = z.object({
   LABS: z.enum(['on', 'off']).default('off'),
   OLLAMA_URL: z.string().optional(),
   OLLAMA_MODEL: z.string().default('qwen3:8b'),
+  // Razorpay (payments). Leave empty to keep the simulated upgrade in demo/dev.
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  // Comma-separated emails allowed into the admin console.
+  ADMIN_EMAILS: z.string().default(''),
   ROLE: z.enum(['all', 'api', 'worker']).default('all'),
 });
 
@@ -46,6 +52,8 @@ if (env.NODE_ENV === 'production') {
 /** The simulator and demo-data routes: local development, or an explicitly labelled hosted demo. */
 export const isDev = env.WHATSAPP_PROVIDER === 'fake' && (env.NODE_ENV !== 'production' || env.APP_MODE === 'demo');
 export const isDemo = env.APP_MODE === 'demo';
+export const razorpayOn = !!(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET);
+export const adminEmails = env.ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
 export const labs = env.LABS === 'on';
 
 /** Base URL for links in emails. */

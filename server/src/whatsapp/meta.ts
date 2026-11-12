@@ -76,6 +76,7 @@ interface MetaWebhook {
   entry?: {
     changes?: {
       value?: {
+        statuses?: { id: string; status: string; errors?: { code?: number; title?: string; message?: string }[] }[];
         messages?: {
           id: string;
           from: string;
@@ -103,6 +104,26 @@ export function parseMetaWebhook(body: MetaWebhook): InboundMessage[] {
         } else if (m.type === 'button' && m.button) {
           out.push({ ...base, text: m.button.text, buttonPayload: m.button.payload });
         }
+      }
+    }
+  }
+  return out;
+}
+
+export interface DeliveryReceipt {
+  waMessageId: string;
+  status: string;
+  failureReason?: string;
+}
+
+/** Delivery receipts (sent, delivered, read, failed) from a webhook body. */
+export function parseMetaStatuses(body: MetaWebhook): DeliveryReceipt[] {
+  const out: DeliveryReceipt[] = [];
+  for (const entry of body.entry ?? []) {
+    for (const change of entry.changes ?? []) {
+      for (const s of change.value?.statuses ?? []) {
+        const e = s.errors?.[0];
+        out.push({ waMessageId: s.id, status: s.status, failureReason: e ? `${e.code ?? ''} ${e.title ?? e.message ?? ''}`.trim() : undefined });
       }
     }
   }

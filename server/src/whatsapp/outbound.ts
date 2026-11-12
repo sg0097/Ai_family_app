@@ -1,6 +1,7 @@
 import { prisma } from '../lib/db.js';
 import { maskPhone } from '../lib/phone.js';
 import { whatsapp } from './index.js';
+import { forWhatsApp } from '../lib/audio.js';
 import type { SessionMessage, TemplateMessage } from './types.js';
 
 export interface OutboundJob {
@@ -43,10 +44,16 @@ export async function sendOutbound(job: OutboundJob) {
   if (job.voiceClipId && windowOpen) {
     const clip = await prisma.voiceClip.findUnique({ where: { id: job.voiceClipId } });
     if (clip) {
-      const waMessageId = await whatsapp.sendAudio(job.toPhone, { data: Buffer.from(clip.data), mime: clip.mime });
-      await prisma.message.create({
-        data: { parentId: job.parentId, direction: 'OUT', toPhone: job.toPhone, body: `🎤 ${clip.label}`, kind: 'audio', voiceClipId: clip.id, waMessageId, occurrenceId: job.occurrenceId },
-      });
+      try {
+        const audio = await forWhatsApp(Buffer.from(clip.data), clip.mime);
+        const waMessageId = await whatsapp.sendAudio(job.toPhone, audio);
+        await prisma.message.create({
+          data: { parentId: job.parentId, direction: 'OUT', toPhone: job.toPhone, body: `🎤 ${clip.label}`, kind: 'audio', voiceClipId: clip.id, waMessageId, occurrenceId: job.occurrenceId },
+        });
+      } catch (err) {
+        // A voice note that can't be converted or sent must not stop the reminder text.
+        console.error('[outbound] voice note failed, sending text only:', (err as Error).message);
+      }
     }
   }
 

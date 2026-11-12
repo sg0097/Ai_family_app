@@ -33,6 +33,8 @@ model User {
   trialEndsAt    DateTime? // Family plan features are open until then
   voiceClips     VoiceClip[]
   checkIns       CheckIn[]
+  payments       Payment[]
+  suspended      Boolean         @default(false)
 }
 
 enum Plan {
@@ -270,6 +272,8 @@ model Message {
   handledBy    String? // RULES | LLM | BUTTON | NONE
   occurrenceId String?
   voiceClipId  String? // an audio message: which clip was sent
+  deliveryStatus String? // sent | delivered | read | failed (from WhatsApp's receipts)
+  failureReason  String?
   createdAt    DateTime       @default(now())
   events       HealthEvent[]
 
@@ -402,4 +406,22 @@ model Memory {
   updatedAt DateTime      @updatedAt
 
   @@unique([parentId, key])
+}
+
+/// One Razorpay order = one month of a plan for `parents` parents. Activated once, by the
+/// browser's verified signature or by the webhook, whichever arrives first.
+model Payment {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan        Plan
+  parents     Int
+  amountPaise Int
+  orderId     String    @unique
+  paymentId   String?   @unique
+  status      String    @default("CREATED") // CREATED | PAID | FAILED
+  createdAt   DateTime  @default(now())
+  paidAt      DateTime?
+
+  @@index([userId])
 }
